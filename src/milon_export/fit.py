@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 from garmin_fit_sdk import Encoder, Profile
 
+from milon_export.describe import ACTIVITY_NAME
 from milon_export.training import GYM_TZ, training_window
 
 MESG = Profile["mesg_num"]
@@ -109,6 +110,22 @@ def build_fit(stat: dict) -> bytes:
             "manufacturer": "development",
             "product": 0,
             "time_created": start,
+        }
+    )
+    encoder.write_mesg(
+        {
+            "mesg_num": MESG["SPORT"],
+            "sport": "training",
+            "sub_sport": "strength_training",
+            "name": ACTIVITY_NAME,
+        }
+    )
+    encoder.write_mesg(
+        {
+            "mesg_num": MESG["WORKOUT"],
+            "sport": "training",
+            "sub_sport": "strength_training",
+            "wkt_name": ACTIVITY_NAME,
         }
     )
     for index, dev in enumerate(devs):
