@@ -1,4 +1,5 @@
 import pytest
+from conftest import T0
 
 from milon_export import (
     attendance_months,
@@ -29,19 +30,22 @@ def test_parse_cookies_wrong_field_count():
 def test_attendance_months_uses_gym_timezone():
     att = [
         {"t": EPOCH_2026_10_31_2330Z, "type": "p"},
-        {"t": 1794298668, "type": "p"},
-        {"t": 1794298668, "type": "tp"},
+        {"t": T0, "type": "p"},
+        {"t": T0, "type": "tp"},
     ]
     assert attendance_months(att) == ["2611"]
 
 
-def test_duplicate_activity_id():
-    error = (
-        "milon-1.fit duplicate of <a href='http://strava.com/activities/123'>"
-        "activity</a>"
-    )
-    assert duplicate_activity_id(error) == 123
-    assert duplicate_activity_id("bad file") is None
+@pytest.mark.parametrize(
+    ("error", "expected"),
+    [
+        ("x duplicate of <a href='http://strava.com/activities/123'>a</a>", 123),
+        ("x duplicate of activity 456", 456),
+        ("bad file", None),
+    ],
+)
+def test_duplicate_activity_id(error, expected):
+    assert duplicate_activity_id(error) == expected
 
 
 def test_token_expired():

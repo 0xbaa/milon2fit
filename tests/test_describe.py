@@ -31,9 +31,10 @@ def test_groups_stations_in_first_appearance_order(devices_map):
         ],
         ws=60,
         moves=28,
+        d=180,
     )
     lines = build_description(stat, devices_map, [stat]).splitlines()
-    assert lines[0] == "60 kcal · 28 reps · 30 min · 2.1 t moved"
+    assert lines[0] == "60 kcal · 28 reps · 3 min active · 4 min total · 2.1 t moved"
     assert lines[2] == "Leg Press 100/130 kg · 8+10 reps · 60/85%"
     assert lines[3] == "Lat Pull 30/40 kg · 10 reps · 90%"
     assert len(lines) == 4
@@ -61,11 +62,13 @@ def test_trend_arrows(devices_map):
     )
     desc = build_description(cur, devices_map, [older2, older, old, cur])
     lines = desc.splitlines()
-    assert lines[2].endswith("↑")
-    assert lines[3].endswith("↓")
-    assert not lines[4].endswith(("↑", "↓"))
+    assert lines[2].startswith("Leg Press 100/130 kg ↑ · ")
+    assert lines[3].startswith("Lat Pull 30/40 kg ↓ · ")
+    assert lines[4].startswith("Rotator Kombi 20/26 kg · ")
 
 
 def test_no_previous_no_arrow(devices_map):
     cur = training(T0, [device(1, T0, 100, 130, 8, 60)])
-    assert not build_description(cur, devices_map, [cur]).endswith(("↑", "↓"))
+    desc = build_description(cur, devices_map, [cur])
+    assert "↑" not in desc
+    assert "↓" not in desc

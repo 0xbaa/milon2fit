@@ -31,7 +31,7 @@
 
 - `data/`, `.env` and `cookies*.txt` are gitignored.
 - `data/strava-uploaded.json` maps training start time to Strava activity id. Trainings listed there are skipped.
-- Strava rejects duplicates via `external_id` (`milon-<t>.fit`); a duplicate error records the existing activity id.
+- Re-uploading a training produces an identical FIT file, which Strava rejects as a duplicate; the error records the existing activity id. `external_id` (`milon-<t>.fit`) is only stored.
 
 ## Limits
 

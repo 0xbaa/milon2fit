@@ -1,9 +1,13 @@
 from datetime import UTC, datetime
+from zoneinfo import ZoneInfo
 
 from garmin_fit_sdk import Encoder, Profile
 
+from milon_export.describe import training_window
+
 MESG = Profile["mesg_num"]
 TYPES = Profile["types"]
+GYM_TZ = ZoneInfo("Europe/Zurich")
 
 # milon device type id -> (FIT exercise_category, FIT <category>_exercise_name)
 EXERCISES: dict[int, tuple[str, str]] = {
@@ -22,13 +26,13 @@ EXERCISES: dict[int, tuple[str, str]] = {
 }
 
 
-def exercise_ids(dev_id: int) -> tuple[str, int | None]:
-    """FIT category name and exercise-name number for a milon device id."""
-    if dev_id not in EXERCISES:
-        return "unknown", None
-    category, name = EXERCISES[dev_id]
-    numbers = {v: k for k, v in TYPES[f"{category}_exercise_name"].items()}
-    return category, numbers[name]
+EXERCISE_IDS: dict[int, tuple[str, int]] = {
+    dev_id: (
+        category,
+        {v: k for k, v in TYPES[f"{category}_exercise_name"].items()}[name],
+    )
+    for dev_id, (category, name) in EXERCISES.items()
+}
 
 
 def utc(t: int) -> datetime:
@@ -36,7 +40,7 @@ def utc(t: int) -> datetime:
 
 
 def set_mesg(index: int, dev: dict) -> dict:
-    category, subtype = exercise_ids(dev["id"])
+    category, subtype = EXERCISE_IDS.get(dev["id"], ("unknown", None))
     mesg = {
         "mesg_num": MESG["SET"],
         "timestamp": utc(dev["t"] + dev["d"]),
@@ -67,9 +71,15 @@ def lap_mesg(index: int, dev: dict) -> dict:
     }
 
 
+def record_mesg(t: int) -> dict:
+    return {"mesg_num": MESG["RECORD"], "timestamp": utc(t)}
+
+
 def build_fit(stat: dict) -> bytes:
     training = stat["training"]
-    start, end = utc(training["t"]), utc(training["t"] + training["d"])
+    start_t, end_t = training_window(stat)
+    start, end = utc(start_t), utc(end_t)
+    local_end = end + end.astimezone(GYM_TZ).utcoffset()
     devs = sorted(stat["devices"], key=lambda d: d["t"])
     encoder = Encoder()
     encoder.write_mesg(
@@ -89,7 +99,10 @@ def build_fit(stat: dict) -> bytes:
             "event_type": "start",
         }
     )
+    encoder.write_mesg(record_mesg(start_t))
     for index, dev in enumerate(devs):
+        encoder.write_mesg(record_mesg(dev["t"]))
+        encoder.write_mesg(record_mesg(dev["t"] + dev["d"]))
         encoder.write_mesg(set_mesg(index, dev))
         encoder.write_mesg(lap_mesg(index, dev))
     encoder.write_mesg(
@@ -106,7 +119,7 @@ def build_fit(stat: dict) -> bytes:
             "message_index": 0,
             "timestamp": end,
             "start_time": start,
-            "total_elapsed_time": training["d"],
+            "total_elapsed_time": end_t - start_t,
             "total_timer_time": training["d"],
             "total_calories": training["ws"],
             "sport": "training",
@@ -119,6 +132,7 @@ def build_fit(stat: dict) -> bytes:
         {
             "mesg_num": MESG["ACTIVITY"],
             "timestamp": end,
+            "local_timestamp": local_end,
             "total_timer_time": training["d"],
             "num_sessions": 1,
             "type": "manual",

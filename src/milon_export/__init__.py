@@ -7,16 +7,13 @@ import time
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
-from zoneinfo import ZoneInfo
 
 import httpx
 
 from milon_export.describe import build_description, build_name
-from milon_export.fit import build_fit
+from milon_export.fit import GYM_TZ, build_fit
 
 log = logging.getLogger("milon")
-
-GYM_TZ = ZoneInfo("Europe/Zurich")
 
 API = "https://www.milonme.com/api/"
 COOKIE_FILE = Path("cookies-milonme-com.txt")
@@ -61,7 +58,7 @@ def attendance_months(attendance: list[dict]) -> list[str]:
 
 
 def duplicate_activity_id(error: str) -> int | None:
-    match = re.search(r"duplicate of .*?activities/(\d+)", error)
+    match = re.search(r"duplicate of (?:activity |.*?activities/)(\d+)", error)
     return int(match.group(1)) if match else None
 
 
@@ -190,8 +187,17 @@ def wait_for_upload(client: httpx.Client, upload_id: int) -> dict:
     raise TimeoutError(f"strava upload {upload_id} still processing")
 
 
-def upload_fit(client: httpx.Client, stat: dict, devices: dict, history: list[dict]):
-    """Upload one training as FIT; returns the Strava activity id."""
+def upload_training(
+    client: httpx.Client,
+    stat: dict,
+    devices_map: dict,
+    stats: list[dict],
+    uploaded: dict,
+) -> None:
+    """Upload one training as FIT and record its activity id in the state file.
+
+    The id is written before the sport_type PUT so a failed PUT does not lose it.
+    """
     t = stat["training"]["t"]
     resp = check(
         client.post(
@@ -200,7 +206,7 @@ def upload_fit(client: httpx.Client, stat: dict, devices: dict, history: list[di
             data={
                 "data_type": "fit",
                 "name": build_name(stat["training"]),
-                "description": build_description(stat, devices, history),
+                "description": build_description(stat, devices_map, stats),
                 "trainer": 1,
                 "external_id": f"milon-{t}.fit",
             },
@@ -212,21 +218,26 @@ def upload_fit(client: httpx.Client, stat: dict, devices: dict, history: list[di
         if existing is None:
             raise RuntimeError(f"strava upload of {t} failed: {status['error']}")
         log.warning("%s is a duplicate of strava activity %s", t, existing)
-        return existing
+        uploaded[str(t)] = existing
+        write_json(UPLOADED_FILE, uploaded)
+        return
     activity_id = status["activity_id"]
+    uploaded[str(t)] = activity_id
+    write_json(UPLOADED_FILE, uploaded)
     check(
         client.put(f"activities/{activity_id}", data={"sport_type": "WeightTraining"})
     )
-    return activity_id
+    log.info("uploaded %s as %s", t, activity_id)
 
 
 def upload(dry_run: bool) -> None:
     """Upload pending trainings to Strava as FIT files.
 
-    A crash between a successful upload and the state write can cause a
-    duplicate on the next run, unless Strava rejects it via external_id.
+    Re-uploading a training produces an identical FIT file, which Strava rejects
+    as a duplicate. A crash between a successful upload and the state write is
+    therefore recovered on the next run via the duplicate error.
     """
-    devices = read_json(MILON_DIR / "devices.json")
+    devices_map = read_json(MILON_DIR / "devices.json")
     uploaded = read_json(UPLOADED_FILE) if UPLOADED_FILE.exists() else {}
     stats = load_stats()
     pending = [s for s in stats if str(s["training"]["t"]) not in uploaded]
@@ -234,21 +245,17 @@ def upload(dry_run: bool) -> None:
     if not pending:
         return
     if dry_run:
+        FIT_DIR.mkdir(parents=True, exist_ok=True)
         for stat in pending:
-            t = stat["training"]["t"]
-            FIT_DIR.mkdir(parents=True, exist_ok=True)
-            (FIT_DIR / f"{t}.fit").write_bytes(build_fit(stat))
+            (FIT_DIR / f"{stat['training']['t']}.fit").write_bytes(build_fit(stat))
             print(build_name(stat["training"]))
-            print(build_description(stat, devices, stats))
+            print(build_description(stat, devices_map, stats))
             print()
         return
     headers = {"Authorization": f"Bearer {fresh_token()}"}
     with httpx.Client(base_url=STRAVA_API, headers=headers) as client:
         for stat in pending:
-            t = stat["training"]["t"]
-            uploaded[str(t)] = upload_fit(client, stat, devices, stats)
-            write_json(UPLOADED_FILE, uploaded)
-            log.info("uploaded %s as %s", t, uploaded[str(t)])
+            upload_training(client, stat, devices_map, stats, uploaded)
 
 
 def main() -> None:
