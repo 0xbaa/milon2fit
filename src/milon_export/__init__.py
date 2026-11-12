@@ -2,6 +2,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import time
 from datetime import datetime
 from pathlib import Path
@@ -9,6 +10,9 @@ from urllib.parse import parse_qs, urlparse
 from zoneinfo import ZoneInfo
 
 import httpx
+
+from milon_export.describe import build_description, build_name
+from milon_export.fit import build_fit
 
 log = logging.getLogger("milon")
 
@@ -21,7 +25,10 @@ TOKEN_FILE = Path("data/strava-token.json")
 UPLOADED_FILE = Path("data/strava-uploaded.json")
 STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
-STRAVA_ACTIVITIES_URL = "https://www.strava.com/api/v3/activities"
+STRAVA_API = "https://www.strava.com/api/v3/"
+FIT_DIR = Path("data/fit")
+UPLOAD_TIMEOUT = 120
+POLL_INTERVAL = 2
 TOKEN_EXPIRY_MARGIN = 60
 
 
@@ -53,29 +60,9 @@ def attendance_months(attendance: list[dict]) -> list[str]:
     return sorted(months)
 
 
-def build_payload(stat: dict, devices: dict) -> dict:
-    training = stat["training"]
-    plan = training["plan_name"]
-    name = f"milon circle {plan}" if plan else "milon circle"
-    lines = [
-        f"{training['ws']} kcal, {training['moves']} moves, {training['d'] // 60} min",
-        "",
-    ]
-    for dev in sorted(stat["devices"], key=lambda d: d["t"]):
-        lines.append(
-            f"{devices[str(dev['id'])]['name']}: {dev['aw']}/{dev['adw']} kg, "
-            f"{dev['moves']} moves, {dev['ws']} kcal, {dev['tr_q']}%"
-        )
-    return {
-        "name": name,
-        "sport_type": "WeightTraining",
-        "start_date_local": datetime.fromtimestamp(training["t"], GYM_TZ)
-        .replace(tzinfo=None)
-        .isoformat(timespec="seconds"),
-        "elapsed_time": training["d"],
-        "trainer": 1,
-        "description": "\n".join(lines),
-    }
+def duplicate_activity_id(error: str) -> int | None:
+    match = re.search(r"duplicate of .*?activities/(\d+)", error)
+    return int(match.group(1)) if match else None
 
 
 def token_expired(token: dict, now: float | None = None) -> bool:
@@ -193,32 +180,75 @@ def load_stats() -> list[dict]:
     return sorted(stats, key=lambda s: s["training"]["t"])
 
 
-def upload(dry_run: bool) -> None:
-    """Post pending trainings to Strava.
+def wait_for_upload(client: httpx.Client, upload_id: int) -> dict:
+    deadline = time.monotonic() + UPLOAD_TIMEOUT
+    while time.monotonic() < deadline:
+        status = check(client.get(f"uploads/{upload_id}")).json()
+        if status["activity_id"] or status["error"]:
+            return status
+        time.sleep(POLL_INTERVAL)
+    raise TimeoutError(f"strava upload {upload_id} still processing")
 
-    A crash between a successful POST and the state write can cause a duplicate
-    on the next run: manual activities have no external_id to dedupe on.
+
+def upload_fit(client: httpx.Client, stat: dict, devices: dict, history: list[dict]):
+    """Upload one training as FIT; returns the Strava activity id."""
+    t = stat["training"]["t"]
+    resp = check(
+        client.post(
+            "uploads",
+            files={"file": (f"milon-{t}.fit", build_fit(stat))},
+            data={
+                "data_type": "fit",
+                "name": build_name(stat["training"]),
+                "description": build_description(stat, devices, history),
+                "trainer": 1,
+                "external_id": f"milon-{t}.fit",
+            },
+        )
+    )
+    status = wait_for_upload(client, resp.json()["id"])
+    if status["error"]:
+        existing = duplicate_activity_id(status["error"])
+        if existing is None:
+            raise RuntimeError(f"strava upload of {t} failed: {status['error']}")
+        log.warning("%s is a duplicate of strava activity %s", t, existing)
+        return existing
+    activity_id = status["activity_id"]
+    check(
+        client.put(f"activities/{activity_id}", data={"sport_type": "WeightTraining"})
+    )
+    return activity_id
+
+
+def upload(dry_run: bool) -> None:
+    """Upload pending trainings to Strava as FIT files.
+
+    A crash between a successful upload and the state write can cause a
+    duplicate on the next run, unless Strava rejects it via external_id.
     """
     devices = read_json(MILON_DIR / "devices.json")
     uploaded = read_json(UPLOADED_FILE) if UPLOADED_FILE.exists() else {}
-    pending = [s for s in load_stats() if str(s["training"]["t"]) not in uploaded]
+    stats = load_stats()
+    pending = [s for s in stats if str(s["training"]["t"]) not in uploaded]
     log.info("%d trainings to upload", len(pending))
     if not pending:
         return
     if dry_run:
         for stat in pending:
-            print(json.dumps(build_payload(stat, devices), indent=2))
+            t = stat["training"]["t"]
+            FIT_DIR.mkdir(parents=True, exist_ok=True)
+            (FIT_DIR / f"{t}.fit").write_bytes(build_fit(stat))
+            print(build_name(stat["training"]))
+            print(build_description(stat, devices, stats))
+            print()
         return
     headers = {"Authorization": f"Bearer {fresh_token()}"}
-    for stat in pending:
-        resp = httpx.post(
-            STRAVA_ACTIVITIES_URL, headers=headers, data=build_payload(stat, devices)
-        )
-        check(resp)
-        activity_id = resp.json()["id"]
-        uploaded[str(stat["training"]["t"])] = activity_id
-        write_json(UPLOADED_FILE, uploaded)
-        log.info("uploaded %s as %s", stat["training"]["t"], activity_id)
+    with httpx.Client(base_url=STRAVA_API, headers=headers) as client:
+        for stat in pending:
+            t = stat["training"]["t"]
+            uploaded[str(t)] = upload_fit(client, stat, devices, stats)
+            write_json(UPLOADED_FILE, uploaded)
+            log.info("uploaded %s as %s", t, uploaded[str(t)])
 
 
 def main() -> None:
