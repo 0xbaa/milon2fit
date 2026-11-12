@@ -1,0 +1,26 @@
+[project]
+name = "milon-export"
+version = "0.1.0"
+description = "Export milon ME training data and upload to Strava"
+authors = [
+    { name = "0xbaa", email = "92133417+0xbaa@users.noreply.github.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "httpx>=0.28.1",
+]
+
+[project.scripts]
+milon = "milon_export:main"
+
+[build-system]
+requires = ["uv_build>=0.13.7,<0.14.0"]
+build-backend = "uv_build"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+]
