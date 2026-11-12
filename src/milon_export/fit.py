@@ -8,41 +8,66 @@ from milon_export.training import GYM_TZ, training_window
 MESG = Profile["mesg_num"]
 TYPES = Profile["types"]
 
-# milon device type id -> (FIT exercise_category, FIT <category>_exercise_name).
-# None: FIT has no machine variant; the category alone avoids a wrong exercise name.
-EXERCISES: dict[int, tuple[str, str | None]] = {
-    531: ("hyperextension", "weighted_spine_extension"),
-    532: ("bench_press", None),
-    533: ("row", "seated_cable_row"),
-    534: ("crunch", "weighted_crunch"),
-    536: ("leg_curl", "weighted_leg_curl"),
-    537: ("squat", "leg_press"),
-    542: ("hip_stability", "weighted_standing_adduction"),
-    543: ("hip_stability", "weighted_standing_hip_abduction"),
-    545: ("flye", "incline_reverse_flye"),
-    546: ("core", "russian_twist"),
-    708: ("pull_up", "lat_pulldown"),
-    709: ("shoulder_press", None),
+# (keywords, FIT exercise_category, FIT <category>_exercise_name); matched against
+# the upper-cased milon machine name, first rule with any keyword as a substring
+# wins, so order matters (e.g. LATERAL RAISE must not match LAT PULL rules).
+# name None: FIT has no matching exercise; the category alone avoids a wrong name.
+EXERCISE_RULES: list[tuple[tuple[str, ...], str, str | None]] = [
+    (("ROTATOR", "TORSO TWIST"), "core", "russian_twist"),
+    (("BUTTERFLY REV",), "flye", "incline_reverse_flye"),
+    (("CABLETEC BUTTERFLY", "CABLETEC CROSS"), "flye", "cable_crossover"),
+    (("BUTTERFLY", "BRUSTMASCHINE"), "flye", None),
+    (("CHEST PRESS", "BANKDRÜCK", "BANK DRÜCK"), "bench_press", None),
+    (
+        ("LAT PULL", "LATZUG", "PULLDOWN", "CABLETEC LAT", "UNIVERSAL LAT"),
+        "pull_up",
+        "lat_pulldown",
+    ),
+    (("LATERAL RAISE",), "lateral_raise", "seated_lateral_raise"),
+    (("LOW PULL", "ROW", "RUDER"), "row", "seated_cable_row"),
+    (("SHOULDER PRESS", "SCHULTERPRESSE", "SCHULTERDRÜCK"), "shoulder_press", None),
+    (("LEG PRESS", "BEINPRESSE"), "squat", "leg_press"),
+    (("LEG EXTENSION", "BEINSTRECKER"), "squat", None),
+    (("LEG CURL", "BEINBEUGER"), "leg_curl", "weighted_leg_curl"),
+    (("ABDUCTOR", "ABDUKTOR"), "hip_stability", "weighted_standing_hip_abduction"),
+    (("ADDUCTOR", "ADDUKTOR"), "hip_stability", "weighted_standing_adduction"),
+    (("ABDOMINAL", "BAUCH"), "crunch", "weighted_crunch"),
+    (
+        ("BACK EXTENSION", "RÜCKENSTRECKER", "UNTERER RÜCKEN"),
+        "hyperextension",
+        "weighted_spine_extension",
+    ),
+    (("HIP THRUST",), "hip_raise", "barbell_hip_thrust_with_bench"),
+    (("GLUTAEUS",), "hip_stability", "weighted_quadruped_hip_extension"),
+    (("WADEN",), "calf_raise", None),
+    (("BEINHEBEN", "LEG LIFTING"), "leg_raise", None),
+    (("DIPS",), "triceps_extension", "weighted_dip"),
+    (("TRICEPS", "TRIZEPS"), "triceps_extension", None),
+    (("BICEPS", "BIZEPS", "ARM CURL"), "curl", None),
+]
+
+EXERCISE_NUMBERS: dict[str, dict[str, int]] = {
+    category: {v: k for k, v in TYPES[f"{category}_exercise_name"].items()}
+    for _, category, _ in EXERCISE_RULES
 }
 
 
-EXERCISE_IDS: dict[int, tuple[str, int | None]] = {
-    dev_id: (
-        category,
-        None
-        if name is None
-        else {v: k for k, v in TYPES[f"{category}_exercise_name"].items()}[name],
-    )
-    for dev_id, (category, name) in EXERCISES.items()
-}
+def exercise_for(machine: str) -> tuple[str, int | None]:
+    """FIT category and exercise-name number for a milon machine name."""
+    upper = machine.upper()
+    for keywords, category, name in EXERCISE_RULES:
+        if any(keyword in upper for keyword in keywords):
+            number = None if name is None else EXERCISE_NUMBERS[category][name]
+            return category, number
+    return "unknown", None
 
 
 def utc(t: int) -> datetime:
     return datetime.fromtimestamp(t, UTC)
 
 
-def set_mesg(index: int, dev: dict) -> dict:
-    category, subtype = EXERCISE_IDS.get(dev["id"], ("unknown", None))
+def set_mesg(index: int, dev: dict, devices_map: dict) -> dict:
+    category, subtype = exercise_for(devices_map[str(dev["id"])]["name"])
     mesg = {
         "mesg_num": MESG["SET"],
         "timestamp": utc(dev["t"] + dev["d"]),
@@ -86,7 +111,7 @@ def timer_mesg(t: int, event_type: str) -> dict:
     }
 
 
-def build_fit(stat: dict) -> bytes:
+def build_fit(stat: dict, devices_map: dict) -> bytes:
     """Encode a training as a FIT activity.
 
     The timer runs only during sets, so start->stop intervals sum to
@@ -135,7 +160,7 @@ def build_fit(stat: dict) -> bytes:
         write_records(dev["t"])
         encoder.write_mesg(timer_mesg(dev["t"], "start"))
         write_records(dev["t"] + dev["d"])
-        encoder.write_mesg(set_mesg(index, dev))
+        encoder.write_mesg(set_mesg(index, dev, devices_map))
         encoder.write_mesg(lap_mesg(index, dev))
         last = index == len(devs) - 1
         encoder.write_mesg(

@@ -205,7 +205,7 @@ def upload_training(
     resp = check(
         client.post(
             "uploads",
-            files={"file": (f"milon-{t}.fit", build_fit(stat))},
+            files={"file": (f"milon-{t}.fit", build_fit(stat, devices_map))},
             data={
                 "data_type": "fit",
                 "name": ACTIVITY_NAME,
@@ -248,7 +248,9 @@ def upload(dry_run: bool) -> None:
     if dry_run:
         FIT_DIR.mkdir(parents=True, exist_ok=True)
         for stat in pending:
-            (FIT_DIR / f"{stat['training']['t']}.fit").write_bytes(build_fit(stat))
+            (FIT_DIR / f"{stat['training']['t']}.fit").write_bytes(
+                build_fit(stat, devices_map)
+            )
             print(ACTIVITY_NAME)
             print(build_description(stat, devices_map, stats))
             print()
@@ -277,7 +279,7 @@ def garmin_upload(dry_run: bool) -> None:
     for stat in pending:
         t = stat["training"]["t"]
         path = FIT_DIR / f"{t}.fit"
-        path.write_bytes(build_fit(stat))
+        path.write_bytes(build_fit(stat, devices_map))
         description = build_description(stat, devices_map, stats)
         if api is None:
             print(ACTIVITY_NAME)
