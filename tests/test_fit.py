@@ -2,6 +2,7 @@ import pytest
 from conftest import T0, device, training
 from garmin_fit_sdk import Decoder, Profile, Stream, convert_datetime_to_timestamp
 
+from milon_export.describe import ACTIVITY_NAME
 from milon_export.fit import EXERCISES, build_fit
 
 TYPES = Profile["types"]
@@ -115,3 +116,13 @@ def test_mapping_exists_in_profile(dev_id, mapping):
     category, name = mapping
     assert category in TYPES["exercise_category"].values()
     assert name in TYPES[f"{category}_exercise_name"].values()
+
+
+def test_activity_name_in_sport_and_workout_messages():
+    stat = training(T0, [device(537, T0, 100, 130, 8, 60, d=30)])
+    data = decode(build_fit(stat))
+    sport = data["sport_mesgs"][0]
+    workout = data["workout_mesgs"][0]
+    assert sport["name"] == workout["wkt_name"] == ACTIVITY_NAME
+    assert sport["sport"] == workout["sport"] == "training"
+    assert sport["sub_sport"] == workout["sub_sport"] == "strength_training"
