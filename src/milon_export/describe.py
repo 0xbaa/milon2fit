@@ -1,5 +1,5 @@
 UP, DOWN = "↑", "↓"
-ACTIVITY_NAME = "Grampa Pump Circuit"
+ACTIVITY_NAME = "Boomer Pump Circuit"
 
 
 def station_name(raw: str) -> str:
