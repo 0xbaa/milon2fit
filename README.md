@@ -13,7 +13,7 @@
 - Enter the environment: `nix develop`, or `direnv allow`.
 - milon cookies:
   - Log in at https://www.milonme.com in a browser.
-  - Export the cookies of `www.milonme.com` in Netscape format (a "cookies.txt" browser extension) to `cookies-milonme-com.txt` in the repo root.
+  - Export the cookies of `www.milonme.com` in Netscape format (a "cookies.txt" browser extension) to `auth/cookies-milonme-com.txt`.
   - The `rs-token` session lasts about 90 days. Re-export the file on HTTP 401.
 - Strava:
   - Create an app at https://www.strava.com/settings/api with Authorization Callback Domain `localhost`.

@@ -16,7 +16,7 @@ from milon_export.fit import GYM_TZ, build_fit
 log = logging.getLogger("milon")
 
 API = "https://www.milonme.com/api/"
-COOKIE_FILE = Path("cookies-milonme-com.txt")
+COOKIE_FILE = Path("auth/cookies-milonme-com.txt")
 MILON_DIR = Path("data/milon")
 TOKEN_FILE = Path("auth/strava-token.json")
 UPLOADED_FILE = Path("state/strava-uploaded.json")
