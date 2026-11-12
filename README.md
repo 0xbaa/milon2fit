@@ -21,7 +21,7 @@
    - Create a free account at https://connect.garmin.com (no Garmin device needed).
    - Link Strava: Garmin Connect, Settings, Connected Apps, Strava. Activities uploaded to Garmin are then forwarded to Strava.
    - Put `GARMIN_EMAIL=...` in `.env`.
-   - Run `just garmin-login` in a terminal. It reads the password via `pass show garmin.com` and prompts for the MFA code if enabled. Tokens are saved to `auth/garmin/`.
+   - Run `just garmin-login` in a terminal. It reads the password via `pass show garmin.com` and prompts for the MFA code if enabled. Tokens are saved to `~/.local/state/milon-export/garmin/`, outside the repo, so a sandboxed Claude Code session in this repo cannot read them.
    - `just garmin` uses only the saved tokens. On auth errors run `just garmin-login` again.
 
 ## Usage

@@ -9,7 +9,7 @@ from pathlib import Path
 from garminconnect import Garmin
 from garminconnect.exceptions import GarminConnectConnectionError
 
-GARMIN_DIR = Path("auth/garmin")
+GARMIN_DIR = Path.home() / ".local/state/milon-export/garmin"
 PASS_ENTRY = "garmin.com"
 LOOKUP_ATTEMPTS = 10
 LOOKUP_INTERVAL = 3
