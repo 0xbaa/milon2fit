@@ -42,11 +42,12 @@ just garmin
 - `<t>` is the training start as a Unix timestamp.
 - `state/garmin-uploaded.json` maps `<t>` to the Garmin activity id. Trainings listed there are skipped.
 - Re-upload a training: delete it on Garmin Connect, remove its `<t>` entry from `state/garmin-uploaded.json`, run `just garmin`. A training still present on Garmin is reported as a duplicate; its id is looked up and name and description are set again, but Garmin does not forward it to Strava again.
+- Strava de-duplicates by start time, also against deleted activities: a training that was on Strava once is not accepted again via Garmin. Workaround used once: re-upload with all timestamps shifted by 60 s.
 - `data/`, `auth/`, `state/`, `.env` and `cookies*.txt` are gitignored.
 
 ## What shows where
 
-| | Garmin Connect | Strava (via Garmin, not yet verified) |
+| | Garmin Connect | Strava (via Garmin) |
 |---|---|---|
 | Title | `Boomer Pump Circuit` (`ACTIVITY_NAME` in `describe.py`) | Strava default, e.g. "Lunch Weight Training" |
 | Description | per-station summary | none (name and description are set on Garmin after the forward) |
