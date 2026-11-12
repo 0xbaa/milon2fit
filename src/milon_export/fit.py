@@ -8,10 +8,11 @@ from milon_export.training import GYM_TZ, training_window
 MESG = Profile["mesg_num"]
 TYPES = Profile["types"]
 
-# milon device type id -> (FIT exercise_category, FIT <category>_exercise_name)
-EXERCISES: dict[int, tuple[str, str]] = {
+# milon device type id -> (FIT exercise_category, FIT <category>_exercise_name).
+# None: FIT has no machine variant; the category alone avoids a wrong exercise name.
+EXERCISES: dict[int, tuple[str, str | None]] = {
     531: ("hyperextension", "weighted_spine_extension"),
-    532: ("bench_press", "barbell_bench_press"),
+    532: ("bench_press", None),
     533: ("row", "seated_cable_row"),
     534: ("crunch", "weighted_crunch"),
     536: ("leg_curl", "weighted_leg_curl"),
@@ -19,16 +20,18 @@ EXERCISES: dict[int, tuple[str, str]] = {
     542: ("hip_stability", "weighted_standing_adduction"),
     543: ("hip_stability", "weighted_standing_hip_abduction"),
     545: ("flye", "incline_reverse_flye"),
-    546: ("shoulder_stability", "cable_external_rotation"),
+    546: ("core", "russian_twist"),
     708: ("pull_up", "lat_pulldown"),
-    709: ("shoulder_press", "seated_dumbbell_shoulder_press"),
+    709: ("shoulder_press", None),
 }
 
 
-EXERCISE_IDS: dict[int, tuple[str, int]] = {
+EXERCISE_IDS: dict[int, tuple[str, int | None]] = {
     dev_id: (
         category,
-        {v: k for k, v in TYPES[f"{category}_exercise_name"].items()}[name],
+        None
+        if name is None
+        else {v: k for k, v in TYPES[f"{category}_exercise_name"].items()}[name],
     )
     for dev_id, (category, name) in EXERCISES.items()
 }

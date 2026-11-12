@@ -115,7 +115,22 @@ def test_unmapped_station_is_unknown():
 def test_mapping_exists_in_profile(dev_id, mapping):
     category, name = mapping
     assert category in TYPES["exercise_category"].values()
-    assert name in TYPES[f"{category}_exercise_name"].values()
+    if name is not None:
+        assert name in TYPES[f"{category}_exercise_name"].values()
+
+
+def test_category_only_station_has_no_subtype():
+    stat = training(T0, [device(532, T0, 46, 60, 10, 99)])
+    sets = decode(build_fit(stat))["set_mesgs"]
+    assert sets[0]["category"] == "bench_press"
+    assert "category_subtype" not in sets[0]
+
+
+def test_rotator_is_trunk_rotation():
+    stat = training(T0, [device(546, T0, 6, 8, 10, 90)])
+    sets = decode(build_fit(stat))["set_mesgs"]
+    assert sets[0]["category"] == "core"
+    assert TYPES["core_exercise_name"][sets[0]["category_subtype"]] == "russian_twist"
 
 
 def test_activity_name_in_sport_and_workout_messages():
