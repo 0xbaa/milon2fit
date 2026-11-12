@@ -10,7 +10,7 @@ from urllib.parse import parse_qs, urlparse
 
 import httpx
 
-from milon_export.describe import build_description, build_name
+from milon_export.describe import ACTIVITY_NAME, build_description
 from milon_export.fit import GYM_TZ, build_fit
 
 log = logging.getLogger("milon")
@@ -205,7 +205,7 @@ def upload_training(
             files={"file": (f"milon-{t}.fit", build_fit(stat))},
             data={
                 "data_type": "fit",
-                "name": build_name(stat["training"]),
+                "name": ACTIVITY_NAME,
                 "description": build_description(stat, devices_map, stats),
                 "trainer": 1,
                 "external_id": f"milon-{t}.fit",
@@ -248,7 +248,7 @@ def upload(dry_run: bool) -> None:
         FIT_DIR.mkdir(parents=True, exist_ok=True)
         for stat in pending:
             (FIT_DIR / f"{stat['training']['t']}.fit").write_bytes(build_fit(stat))
-            print(build_name(stat["training"]))
+            print(ACTIVITY_NAME)
             print(build_description(stat, devices_map, stats))
             print()
         return

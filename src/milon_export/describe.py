@@ -1,13 +1,9 @@
 UP, DOWN = "↑", "↓"
+ACTIVITY_NAME = "Grampa Pump Circuit"
 
 
 def station_name(raw: str) -> str:
     return raw.removeprefix("Q ").removesuffix(" V2").title()
-
-
-def build_name(training: dict) -> str:
-    plan = training["plan_name"]
-    return f"milon circle {plan}" if plan else "milon circle"
 
 
 def station_rounds(devices: list[dict]) -> dict[int, list[dict]]:

@@ -1,7 +1,7 @@
 import pytest
 from conftest import T0, device, training
 
-from milon_export.describe import build_description, build_name, station_name
+from milon_export.describe import build_description, station_name
 
 
 @pytest.mark.parametrize(
@@ -14,11 +14,6 @@ from milon_export.describe import build_description, build_name, station_name
 )
 def test_station_name(raw, expected):
     assert station_name(raw) == expected
-
-
-def test_build_name():
-    assert build_name({"plan_name": "Plan A"}) == "milon circle Plan A"
-    assert build_name({"plan_name": ""}) == "milon circle"
 
 
 def test_groups_stations_in_first_appearance_order(devices_map):
