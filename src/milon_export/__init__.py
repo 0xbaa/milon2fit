@@ -12,7 +12,8 @@ import httpx
 
 from milon_export.describe import ACTIVITY_NAME, build_description
 from milon_export.fit import build_fit
-from milon_export.training import GYM_TZ
+from milon_export.garmin import connect, upload_fit_file
+from milon_export.training import GYM_TZ, pending_trainings
 
 log = logging.getLogger("milon")
 
@@ -21,6 +22,7 @@ COOKIE_FILE = Path("auth/cookies-milonme-com.txt")
 MILON_DIR = Path("data/milon")
 TOKEN_FILE = Path("auth/strava-token.json")
 UPLOADED_FILE = Path("state/strava-uploaded.json")
+GARMIN_UPLOADED_FILE = Path("state/garmin-uploaded.json")
 STRAVA_AUTH_URL = "https://www.strava.com/oauth/authorize"
 STRAVA_TOKEN_URL = "https://www.strava.com/oauth/token"
 STRAVA_API = "https://www.strava.com/api/v3/"
@@ -257,6 +259,42 @@ def upload(dry_run: bool) -> None:
             upload_training(client, stat, devices_map, stats, uploaded)
 
 
+def garmin_upload(dry_run: bool) -> None:
+    """Upload pending trainings to Garmin Connect as FIT files.
+
+    A crash between a successful upload and the state write is recovered on the
+    next run via Garmin's duplicate response.
+    """
+    devices_map = read_json(MILON_DIR / "devices.json")
+    uploaded = read_json(GARMIN_UPLOADED_FILE) if GARMIN_UPLOADED_FILE.exists() else {}
+    stats = load_stats()
+    pending = pending_trainings(stats, uploaded)
+    log.info("%d trainings to upload", len(pending))
+    if not pending:
+        return
+    FIT_DIR.mkdir(parents=True, exist_ok=True)
+    api = None if dry_run else connect()
+    for stat in pending:
+        t = stat["training"]["t"]
+        path = FIT_DIR / f"{t}.fit"
+        path.write_bytes(build_fit(stat))
+        description = build_description(stat, devices_map, stats)
+        if api is None:
+            print(ACTIVITY_NAME)
+            print(description)
+            print()
+            continue
+        outcome = upload_fit_file(api, path)
+        uploaded[str(t)] = outcome.activity_id
+        write_json(GARMIN_UPLOADED_FILE, uploaded)
+        if outcome.activity_id is None:
+            log.warning("%s is a duplicate with unknown garmin activity id", t)
+            continue
+        api.set_activity_name(outcome.activity_id, ACTIVITY_NAME)
+        api.set_activity_description(outcome.activity_id, description)
+        log.info("uploaded %s as %s", t, outcome.activity_id)
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(message)s")
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -266,6 +304,9 @@ def main() -> None:
     sub.add_parser("strava-auth")
     up = sub.add_parser("upload")
     up.add_argument("--dry-run", action="store_true")
+    sub.add_parser("garmin-login")
+    gm = sub.add_parser("garmin")
+    gm.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
     match args.command:
         case "export":
@@ -274,3 +315,8 @@ def main() -> None:
             strava_auth()
         case "upload":
             upload(args.dry_run)
+        case "garmin-login":
+            connect()
+            log.info("saved garmin tokens")
+        case "garmin":
+            garmin_upload(args.dry_run)

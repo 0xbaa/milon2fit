@@ -8,3 +8,7 @@ def training_window(stat: dict) -> tuple[int, int]:
     start = min([stat["training"]["t"], *(dev["t"] for dev in stat["devices"])])
     end = max(dev["t"] + dev["d"] for dev in stat["devices"])
     return start, end
+
+
+def pending_trainings(stats: list[dict], uploaded: dict) -> list[dict]:
+    return [s for s in stats if str(s["training"]["t"]) not in uploaded]

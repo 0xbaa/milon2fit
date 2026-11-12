@@ -21,6 +21,12 @@
   - Run `just strava-auth`, open the printed URL, approve, then paste the redirected `http://localhost/?code=...` URL. The page does not load; that is expected.
   - The token is saved to `auth/strava-token.json` (mode 0600) and refreshed automatically.
 
+- Garmin (alternative to the Strava API, which needs a subscription):
+  - Free Garmin Connect account. In Garmin Connect, link Strava under Connected Apps; activities uploaded to Garmin then sync to Strava.
+  - Put `GARMIN_EMAIL` and `GARMIN_PASSWORD` in `.env` (only needed until tokens are saved).
+  - Run `just garmin-login` once, interactively (prompts for the MFA code if enabled). Tokens are saved to `auth/garmin/` (mode 0700).
+  - Uses the unofficial `garminconnect` library; Garmin may change the API and break it.
+
 ## Usage
 
 | Command | Effect |
@@ -28,9 +34,12 @@
 | `just export` | Fetches profile, devices and monthly premium stats into `data/milon/` |
 | `just upload --dry-run` | Writes FIT files to `data/fit/<t>.fit`, prints activity name and description |
 | `just upload` | Uploads pending trainings to Strava |
+| `just garmin --dry-run` | Writes FIT files, prints activity name and description, no login |
+| `just garmin` | Uploads pending trainings to Garmin Connect, then sets name and description |
 
 - `data/`, `auth/`, `state/`, `.env` and `cookies*.txt` are gitignored.
 - `state/strava-uploaded.json` maps training start time to Strava activity id. Trainings listed there are skipped.
+- `state/garmin-uploaded.json` maps training start time to Garmin activity id (null when a duplicate response gave no id).
 - While `fit.py` is unchanged, re-uploading a training produces an identical FIT file, which Strava rejects as a duplicate; the error records the existing activity id. `external_id` (`milon-<t>.fit`) is only stored.
 
 ## Limits
