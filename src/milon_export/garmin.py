@@ -1,4 +1,5 @@
 import os
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -7,6 +8,7 @@ from garminconnect.exceptions import GarminConnectConnectionError
 
 GARMIN_DIR = Path("auth/garmin")
 TOKEN_FILE = GARMIN_DIR / "garmin_tokens.json"
+PASS_ENTRY = "garmin.com"
 HTTP_CONFLICT = 409
 DUPLICATE_CODE = 202
 
@@ -31,8 +33,16 @@ def parse_upload_result(payload: dict) -> UploadOutcome:
     raise RuntimeError(f"garmin upload failed: {[m['content'] for m in messages]}")
 
 
+def pass_secret(entry: str) -> str:
+    """First line of `pass show <entry>` (password-store convention)."""
+    out = subprocess.run(
+        ["pass", "show", entry], capture_output=True, text=True, check=True
+    )
+    return out.stdout.splitlines()[0]
+
+
 def connect() -> Garmin:
-    """Log in with saved tokens, else GARMIN_EMAIL/GARMIN_PASSWORD (MFA prompt).
+    """Log in with saved tokens, else GARMIN_EMAIL + `pass` password (MFA prompt).
 
     Tokens are persisted in `auth/garmin/` (mode 0700).
     """
@@ -41,7 +51,7 @@ def connect() -> Garmin:
     if TOKEN_FILE.exists():
         email = password = None
     else:
-        email, password = os.environ["GARMIN_EMAIL"], os.environ["GARMIN_PASSWORD"]
+        email, password = os.environ["GARMIN_EMAIL"], pass_secret(PASS_ENTRY)
     api = Garmin(email, password, prompt_mfa=lambda: input("Garmin MFA code: "))
     api.login(str(GARMIN_DIR))
     api.client.dump(str(GARMIN_DIR))

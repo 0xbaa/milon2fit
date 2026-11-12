@@ -23,7 +23,7 @@
 
 - Garmin (alternative to the Strava API, which needs a subscription):
   - Free Garmin Connect account. In Garmin Connect, link Strava under Connected Apps; activities uploaded to Garmin then sync to Strava.
-  - Put `GARMIN_EMAIL` and `GARMIN_PASSWORD` in `.env` (only needed until tokens are saved).
+  - Put `GARMIN_EMAIL` in `.env`. The password is read from `pass show garmin.com` (first line). Both are only needed until tokens are saved.
   - Run `just garmin-login` once, interactively (prompts for the MFA code if enabled). Tokens are saved to `auth/garmin/` (mode 0700).
   - Uses the unofficial `garminconnect` library; Garmin may change the API and break it.
 
