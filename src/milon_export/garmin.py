@@ -36,7 +36,7 @@ def parse_upload_result(payload: dict) -> UploadOutcome:
 def pass_secret(entry: str) -> str:
     """First line of `pass show <entry>` (password-store convention)."""
     out = subprocess.run(
-        ["pass", "show", entry], capture_output=True, text=True, check=True
+        ["pass", "show", entry], stdout=subprocess.PIPE, text=True, check=True
     )
     return out.stdout.splitlines()[0]
 
