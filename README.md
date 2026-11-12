@@ -31,7 +31,7 @@
 
 - `data/`, `auth/`, `state/`, `.env` and `cookies*.txt` are gitignored.
 - `state/strava-uploaded.json` maps training start time to Strava activity id. Trainings listed there are skipped.
-- Re-uploading a training produces an identical FIT file, which Strava rejects as a duplicate; the error records the existing activity id. `external_id` (`milon-<t>.fit`) is only stored.
+- While `fit.py` is unchanged, re-uploading a training produces an identical FIT file, which Strava rejects as a duplicate; the error records the existing activity id. `external_id` (`milon-<t>.fit`) is only stored.
 
 ## Limits
 

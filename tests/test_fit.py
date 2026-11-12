@@ -60,17 +60,48 @@ def test_session_spans_all_sets():
     assert data["activity_mesgs"][0]["timestamp"] == session["timestamp"]
 
 
-def test_records_at_session_start_and_set_boundaries():
-    stat = training(T0, [device(537, T0, 100, 130, 8, 60, d=30)])
+def test_records_one_per_distinct_timestamp():
+    stat = training(
+        T0,
+        [
+            device(537, T0, 100, 130, 8, 60, d=30),
+            device(708, T0 + 30, 30, 40, 8, 60, d=30),
+        ],
+        d=60,
+    )
     records = decode(build_fit(stat))["record_mesgs"]
-    assert [r["timestamp"].timestamp() for r in records] == [T0, T0, T0 + 30]
+    assert [r["timestamp"].timestamp() for r in records] == [T0, T0 + 30, T0 + 60]
 
 
-def test_activity_local_timestamp_uses_gym_offset():
-    stat = training(T0, [device(537, T0, 100, 130, 8, 60, d=30)])
+def test_timer_intervals_sum_to_active_time():
+    stat = training(
+        T0,
+        [
+            device(537, T0, 100, 130, 8, 60, d=30),
+            device(708, T0 + 100, 30, 40, 8, 60, d=20),
+        ],
+        d=50,
+    )
+    events = [
+        e for e in decode(build_fit(stat))["event_mesgs"] if e["event"] == "timer"
+    ]
+    assert [e["event_type"] for e in events] == [
+        "start",
+        "stop",
+        "start",
+        "stop_all",
+    ]
+    stamps = [e["timestamp"].timestamp() for e in events]
+    active = (stamps[1] - stamps[0]) + (stamps[3] - stamps[2])
+    assert active == stat["training"]["d"]
+
+
+@pytest.mark.parametrize(("epoch", "offset"), [(T0, 3600), (1782907200, 7200)])
+def test_activity_local_timestamp_uses_gym_offset(epoch, offset):
+    stat = training(epoch, [device(537, epoch, 100, 130, 8, 60, d=30)])
     activity = decode(build_fit(stat))["activity_mesgs"][0]
     utc_fit = convert_datetime_to_timestamp(activity["timestamp"])
-    assert activity["local_timestamp"] - utc_fit == 3600
+    assert activity["local_timestamp"] - utc_fit == offset
 
 
 def test_unmapped_station_is_unknown():

@@ -1,13 +1,11 @@
 from datetime import UTC, datetime
-from zoneinfo import ZoneInfo
 
 from garmin_fit_sdk import Encoder, Profile
 
-from milon_export.describe import training_window
+from milon_export.training import GYM_TZ, training_window
 
 MESG = Profile["mesg_num"]
 TYPES = Profile["types"]
-GYM_TZ = ZoneInfo("Europe/Zurich")
 
 # milon device type id -> (FIT exercise_category, FIT <category>_exercise_name)
 EXERCISES: dict[int, tuple[str, str]] = {
@@ -75,13 +73,35 @@ def record_mesg(t: int) -> dict:
     return {"mesg_num": MESG["RECORD"], "timestamp": utc(t)}
 
 
+def timer_mesg(t: int, event_type: str) -> dict:
+    return {
+        "mesg_num": MESG["EVENT"],
+        "timestamp": utc(t),
+        "event": "timer",
+        "event_type": event_type,
+    }
+
+
 def build_fit(stat: dict) -> bytes:
+    """Encode a training as a FIT activity.
+
+    The timer runs only during sets, so start->stop intervals sum to
+    training["d"] (the summed active set time).
+    """
     training = stat["training"]
     start_t, end_t = training_window(stat)
     start, end = utc(start_t), utc(end_t)
     local_end = end + end.astimezone(GYM_TZ).utcoffset()
-    devs = sorted(stat["devices"], key=lambda d: d["t"])
+    devs = sorted(stat["devices"], key=lambda dev: dev["t"])
+    pending = sorted(
+        {start_t, *(dev["t"] for dev in devs), *(dev["t"] + dev["d"] for dev in devs)}
+    )
     encoder = Encoder()
+
+    def write_records(upto: int) -> None:
+        while pending and pending[0] <= upto:
+            encoder.write_mesg(record_mesg(pending.pop(0)))
+
     encoder.write_mesg(
         {
             "mesg_num": MESG["FILE_ID"],
@@ -91,28 +111,16 @@ def build_fit(stat: dict) -> bytes:
             "time_created": start,
         }
     )
-    encoder.write_mesg(
-        {
-            "mesg_num": MESG["EVENT"],
-            "timestamp": start,
-            "event": "timer",
-            "event_type": "start",
-        }
-    )
-    encoder.write_mesg(record_mesg(start_t))
     for index, dev in enumerate(devs):
-        encoder.write_mesg(record_mesg(dev["t"]))
-        encoder.write_mesg(record_mesg(dev["t"] + dev["d"]))
+        write_records(dev["t"])
+        encoder.write_mesg(timer_mesg(dev["t"], "start"))
+        write_records(dev["t"] + dev["d"])
         encoder.write_mesg(set_mesg(index, dev))
         encoder.write_mesg(lap_mesg(index, dev))
-    encoder.write_mesg(
-        {
-            "mesg_num": MESG["EVENT"],
-            "timestamp": end,
-            "event": "timer",
-            "event_type": "stop_all",
-        }
-    )
+        last = index == len(devs) - 1
+        encoder.write_mesg(
+            timer_mesg(dev["t"] + dev["d"], "stop_all" if last else "stop")
+        )
     encoder.write_mesg(
         {
             "mesg_num": MESG["SESSION"],

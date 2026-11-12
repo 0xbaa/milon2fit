@@ -11,7 +11,8 @@ from urllib.parse import parse_qs, urlparse
 import httpx
 
 from milon_export.describe import ACTIVITY_NAME, build_description
-from milon_export.fit import GYM_TZ, build_fit
+from milon_export.fit import build_fit
+from milon_export.training import GYM_TZ
 
 log = logging.getLogger("milon")
 
@@ -213,15 +214,13 @@ def upload_training(
         )
     )
     status = wait_for_upload(client, resp.json()["id"])
+    existing = None
     if status["error"]:
         existing = duplicate_activity_id(status["error"])
         if existing is None:
             raise RuntimeError(f"strava upload of {t} failed: {status['error']}")
         log.warning("%s is a duplicate of strava activity %s", t, existing)
-        uploaded[str(t)] = existing
-        write_json(UPLOADED_FILE, uploaded)
-        return
-    activity_id = status["activity_id"]
+    activity_id = existing or status["activity_id"]
     uploaded[str(t)] = activity_id
     write_json(UPLOADED_FILE, uploaded)
     check(
@@ -233,9 +232,9 @@ def upload_training(
 def upload(dry_run: bool) -> None:
     """Upload pending trainings to Strava as FIT files.
 
-    Re-uploading a training produces an identical FIT file, which Strava rejects
-    as a duplicate. A crash between a successful upload and the state write is
-    therefore recovered on the next run via the duplicate error.
+    While fit.py is unchanged, re-uploading a training produces an identical FIT
+    file, which Strava rejects as a duplicate. A crash between a successful upload
+    and the state write is then recovered on the next run via the duplicate error.
     """
     devices_map = read_json(MILON_DIR / "devices.json")
     uploaded = read_json(UPLOADED_FILE) if UPLOADED_FILE.exists() else {}

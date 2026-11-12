@@ -1,3 +1,5 @@
+from milon_export.training import training_window
+
 UP, DOWN = "↑", "↓"
 ACTIVITY_NAME = "Boomer Pump Circuit"
 
@@ -9,16 +11,9 @@ def station_name(raw: str) -> str:
 def station_rounds(devices: list[dict]) -> dict[int, list[dict]]:
     """Device entries grouped by station id, in first-appearance order."""
     rounds: dict[int, list[dict]] = {}
-    for dev in sorted(devices, key=lambda d: d["t"]):
+    for dev in sorted(devices, key=lambda dev: dev["t"]):
         rounds.setdefault(dev["id"], []).append(dev)
     return rounds
-
-
-def training_window(stat: dict) -> tuple[int, int]:
-    """Wall-clock (start, end) epochs covering the training and all its sets."""
-    start = min([stat["training"]["t"], *(dev["t"] for dev in stat["devices"])])
-    end = max(dev["t"] + dev["d"] for dev in stat["devices"])
-    return start, end
 
 
 def previous_max_aw(stats: list[dict], t: int, dev_id: int) -> int | None:
