@@ -1,7 +1,10 @@
+from datetime import UTC, datetime
+
 import pytest
 from conftest import T0, device, training
 
-from milon_export.garmin import UploadOutcome, parse_upload_result
+import milon_export.garmin as garmin
+from milon_export.garmin import find_activity_id, parse_upload_result, wait_for_activity
 from milon_export.training import pending_trainings
 
 
@@ -15,37 +18,61 @@ def result(successes=(), failures=()):
     }
 
 
-def failure(code, content, **extra):
-    return {"messages": [{"code": code, "content": content}], **extra}
+def activity(activity_id, t):
+    gmt = datetime.fromtimestamp(t, UTC).strftime("%Y-%m-%d %H:%M:%S")
+    return {"activityId": activity_id, "startTimeGMT": gmt}
 
 
 def test_parse_success():
     payload = result(successes=[{"internalId": 123, "externalId": "x"}])
-    assert parse_upload_result(payload) == UploadOutcome(123, duplicate=False)
+    assert parse_upload_result(payload) == 123
 
 
-def test_parse_duplicate_with_id():
-    payload = result(failures=[failure(202, "Duplicate Activity", internalId=456)])
-    assert parse_upload_result(payload) == UploadOutcome(456, duplicate=True)
+def test_parse_accepted_but_processing_is_pending():
+    assert parse_upload_result(result()) is None
 
 
-def test_parse_duplicate_without_id():
-    payload = result(failures=[failure(202, "Duplicate Activity")])
-    assert parse_upload_result(payload) == UploadOutcome(None, duplicate=True)
-
-
-def test_parse_other_failure_raises_with_message():
-    payload = result(failures=[failure(500, "Bad file")])
+def test_parse_failure_raises_with_message():
+    failure = {"messages": [{"code": 500, "content": "Bad file"}]}
     with pytest.raises(RuntimeError, match="Bad file"):
-        parse_upload_result(payload)
+        parse_upload_result(result(failures=[failure]))
 
 
-def test_parse_empty_result_raises():
-    with pytest.raises(RuntimeError):
-        parse_upload_result(result())
+def test_find_activity_id_matches_start_time():
+    activities = [activity(1, T0 - 86400), activity(2, T0), activity(3, T0 + 5)]
+    assert find_activity_id(activities, T0) == 2
+    assert find_activity_id(activities, T0 + 3600) is None
 
 
-def test_pending_trainings_skips_recorded_including_null():
+class FakeApi:
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.calls = 0
+
+    def get_activities_by_date(self, start, end):
+        self.calls += 1
+        return self.responses.pop(0)
+
+
+@pytest.fixture
+def fast(monkeypatch):
+    monkeypatch.setattr(garmin, "LOOKUP_INTERVAL", 0)
+    monkeypatch.setattr(garmin, "LOOKUP_ATTEMPTS", 3)
+
+
+def test_wait_for_activity_retries_until_found(fast):
+    api = FakeApi([[], [activity(7, T0)]])
+    assert wait_for_activity(api, T0) == 7
+    assert api.calls == 2
+
+
+def test_wait_for_activity_raises_when_not_found(fast):
+    api = FakeApi([[], [], []])
+    with pytest.raises(RuntimeError, match="not found"):
+        wait_for_activity(api, T0)
+
+
+def test_pending_trainings_skips_recorded():
     stats = [training(t, [device(537, t, 1, 1, 1, 1)]) for t in (T0, T0 + 1, T0 + 2)]
-    pending = pending_trainings(stats, {str(T0): 5, str(T0 + 2): None})
+    pending = pending_trainings(stats, {str(T0): 5, str(T0 + 2): 6})
     assert [s["training"]["t"] for s in pending] == [T0 + 1]

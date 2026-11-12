@@ -12,8 +12,8 @@ import httpx
 
 from milon_export.describe import ACTIVITY_NAME, build_description
 from milon_export.fit import build_fit
-from milon_export.garmin import connect, upload_fit_file
-from milon_export.training import GYM_TZ, pending_trainings
+from milon_export.garmin import connect, login, upload_fit_file
+from milon_export.training import GYM_TZ, pending_trainings, training_window
 
 log = logging.getLogger("milon")
 
@@ -241,7 +241,7 @@ def upload(dry_run: bool) -> None:
     devices_map = read_json(MILON_DIR / "devices.json")
     uploaded = read_json(UPLOADED_FILE) if UPLOADED_FILE.exists() else {}
     stats = load_stats()
-    pending = [s for s in stats if str(s["training"]["t"]) not in uploaded]
+    pending = pending_trainings(stats, uploaded)
     log.info("%d trainings to upload", len(pending))
     if not pending:
         return
@@ -262,8 +262,8 @@ def upload(dry_run: bool) -> None:
 def garmin_upload(dry_run: bool) -> None:
     """Upload pending trainings to Garmin Connect as FIT files.
 
-    A crash between a successful upload and the state write is recovered on the
-    next run via Garmin's duplicate response.
+    State is written after name and description are set. A crash before that
+    is recovered on the next run: Garmin answers 409 and the id is looked up.
     """
     devices_map = read_json(MILON_DIR / "devices.json")
     uploaded = read_json(GARMIN_UPLOADED_FILE) if GARMIN_UPLOADED_FILE.exists() else {}
@@ -284,15 +284,13 @@ def garmin_upload(dry_run: bool) -> None:
             print(description)
             print()
             continue
-        outcome = upload_fit_file(api, path)
-        uploaded[str(t)] = outcome.activity_id
+        activity_id = upload_fit_file(api, path, training_window(stat)[0])
+        api.update_activity(
+            activity_id, {"activityName": ACTIVITY_NAME, "description": description}
+        )
+        uploaded[str(t)] = activity_id
         write_json(GARMIN_UPLOADED_FILE, uploaded)
-        if outcome.activity_id is None:
-            log.warning("%s is a duplicate with unknown garmin activity id", t)
-            continue
-        api.set_activity_name(outcome.activity_id, ACTIVITY_NAME)
-        api.set_activity_description(outcome.activity_id, description)
-        log.info("uploaded %s as %s", t, outcome.activity_id)
+        log.info("uploaded %s as %s", t, activity_id)
 
 
 def main() -> None:
@@ -316,7 +314,7 @@ def main() -> None:
         case "upload":
             upload(args.dry_run)
         case "garmin-login":
-            connect()
+            login()
             log.info("saved garmin tokens")
         case "garmin":
             garmin_upload(args.dry_run)

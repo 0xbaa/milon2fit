@@ -1,36 +1,54 @@
+import logging
 import os
 import subprocess
-from dataclasses import dataclass
+import time
+from datetime import UTC, datetime, timedelta
+from http import HTTPStatus
 from pathlib import Path
 
 from garminconnect import Garmin
 from garminconnect.exceptions import GarminConnectConnectionError
 
 GARMIN_DIR = Path("auth/garmin")
-TOKEN_FILE = GARMIN_DIR / "garmin_tokens.json"
 PASS_ENTRY = "garmin.com"
-HTTP_CONFLICT = 409
-DUPLICATE_CODE = 202
+LOOKUP_ATTEMPTS = 10
+LOOKUP_INTERVAL = 3
+START_TOLERANCE = 1
+GMT_FORMAT = "%Y-%m-%d %H:%M:%S"
+
+log = logging.getLogger("milon")
 
 
-@dataclass(frozen=True)
-class UploadOutcome:
-    activity_id: int | None
-    duplicate: bool
-
-
-def parse_upload_result(payload: dict) -> UploadOutcome:
-    """Interpret a Garmin `detailedImportResult` upload response."""
+def parse_upload_result(payload: dict) -> int | None:
+    """Activity id of a finished upload; None if Garmin accepted it for processing."""
     result = payload["detailedImportResult"]
     if result["successes"]:
-        return UploadOutcome(result["successes"][0]["internalId"], duplicate=False)
-    if not result["failures"]:
-        raise RuntimeError("garmin upload returned neither successes nor failures")
-    failure = result["failures"][0]
-    messages = failure["messages"]
-    if any(m["code"] == DUPLICATE_CODE for m in messages):
-        return UploadOutcome(failure.get("internalId"), duplicate=True)
-    raise RuntimeError(f"garmin upload failed: {[m['content'] for m in messages]}")
+        return result["successes"][0]["internalId"]
+    if result["failures"]:
+        messages = result["failures"][0]["messages"]
+        raise RuntimeError(f"garmin upload failed: {[m['content'] for m in messages]}")
+    return None
+
+
+def find_activity_id(activities: list[dict], start: int) -> int | None:
+    for act in activities:
+        gmt = datetime.strptime(act["startTimeGMT"], GMT_FORMAT).replace(tzinfo=UTC)
+        if abs(gmt.timestamp() - start) <= START_TOLERANCE:
+            return act["activityId"]
+    return None
+
+
+def wait_for_activity(api: Garmin, start: int) -> int:
+    """Find the activity starting at epoch `start`, retrying while Garmin processes."""
+    day = datetime.fromtimestamp(start, UTC).date()
+    first, last = (day + timedelta(days=d) for d in (-1, 1))
+    for attempt in range(LOOKUP_ATTEMPTS):
+        if attempt:
+            time.sleep(LOOKUP_INTERVAL)
+        activities = api.get_activities_by_date(first.isoformat(), last.isoformat())
+        if (activity_id := find_activity_id(activities, start)) is not None:
+            return activity_id
+    raise RuntimeError(f"garmin activity starting at {start} not found")
 
 
 def pass_secret(entry: str) -> str:
@@ -41,28 +59,39 @@ def pass_secret(entry: str) -> str:
     return out.stdout.splitlines()[0]
 
 
-def connect() -> Garmin:
-    """Log in with saved tokens, else GARMIN_EMAIL + `pass` password (MFA prompt).
-
-    Tokens are persisted in `auth/garmin/` (mode 0700).
-    """
-    GARMIN_DIR.mkdir(mode=0o700, parents=True, exist_ok=True)
-    GARMIN_DIR.chmod(0o700)
-    if TOKEN_FILE.exists():
-        email = password = None
-    else:
-        email, password = os.environ["GARMIN_EMAIL"], pass_secret(PASS_ENTRY)
-    api = Garmin(email, password, prompt_mfa=lambda: input("Garmin MFA code: "))
+def login() -> Garmin:
+    """Credential login (GARMIN_EMAIL + `pass` password, MFA prompt); saves tokens."""
+    api = Garmin(
+        os.environ["GARMIN_EMAIL"],
+        pass_secret(PASS_ENTRY),
+        prompt_mfa=lambda: input("Garmin MFA code: "),
+    )
     api.login(str(GARMIN_DIR))
-    api.client.dump(str(GARMIN_DIR))
+    save_tokens(api)
     return api
 
 
-def upload_fit_file(api: Garmin, path: Path) -> UploadOutcome:
+def connect() -> Garmin:
+    """Log in with the tokens saved by `login`."""
+    api = Garmin()
+    api.login(str(GARMIN_DIR))
+    save_tokens(api)
+    return api
+
+
+def save_tokens(api: Garmin) -> None:
+    # The lib swallows dump errors during login, so dump explicitly.
+    api.client.dump(str(GARMIN_DIR))
+
+
+def upload_fit_file(api: Garmin, path: Path, start: int) -> int:
+    """Upload a FIT file; returns the Garmin activity id (existing one on duplicate)."""
     try:
         payload = api.upload_activity(str(path))
     except GarminConnectConnectionError as e:
-        if e.response is None or e.response.status_code != HTTP_CONFLICT:
+        if e.response is None or e.response.status_code != HTTPStatus.CONFLICT:
             raise
-        payload = e.response.json()
-    return parse_upload_result(payload)
+        log.warning("%s already on garmin, looking up its id", path.name)
+        return wait_for_activity(api, start)
+    activity_id = parse_upload_result(payload)
+    return wait_for_activity(api, start) if activity_id is None else activity_id

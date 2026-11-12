@@ -22,9 +22,9 @@
   - The token is saved to `auth/strava-token.json` (mode 0600) and refreshed automatically.
 
 - Garmin (alternative to the Strava API, which needs a subscription):
-  - Free Garmin Connect account. In Garmin Connect, link Strava under Connected Apps; activities uploaded to Garmin then sync to Strava.
-  - Put `GARMIN_EMAIL` in `.env`. The password is read from `pass show garmin.com` (first line). Both are only needed until tokens are saved.
-  - Run `just garmin-login` once, interactively (prompts for the MFA code if enabled). Tokens are saved to `auth/garmin/` (mode 0700).
+  - Free Garmin Connect account. In Garmin Connect, link Strava under Connected Apps; Garmin forwards the FIT file to Strava when it is uploaded. Name and description are edited on Garmin afterwards and probably do not reach Strava, so Strava shows its default title.
+  - Put `GARMIN_EMAIL` in `.env`. The password is read from `pass show garmin.com` (first line). Both are only used by `just garmin-login`.
+  - Run `just garmin-login` once, interactively (prompts for the MFA code if enabled). Tokens are saved to `auth/garmin/`. `just garmin` uses only the saved tokens; on auth errors run `just garmin-login` again.
   - Uses the unofficial `garminconnect` library; Garmin may change the API and break it.
 
 ## Usage
@@ -39,7 +39,7 @@
 
 - `data/`, `auth/`, `state/`, `.env` and `cookies*.txt` are gitignored.
 - `state/strava-uploaded.json` maps training start time to Strava activity id. Trainings listed there are skipped.
-- `state/garmin-uploaded.json` maps training start time to Garmin activity id (null when a duplicate response gave no id).
+- `state/garmin-uploaded.json` maps training start time to Garmin activity id.
 - While `fit.py` is unchanged, re-uploading a training produces an identical FIT file, which Strava rejects as a duplicate; the error records the existing activity id. `external_id` (`milon-<t>.fit`) is only stored.
 
 ## Limits
