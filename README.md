@@ -19,7 +19,7 @@
   - Create an app at https://www.strava.com/settings/api with Authorization Callback Domain `localhost`.
   - Put `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET` in `.env`.
   - Run `just strava-auth`, open the printed URL, approve, then paste the redirected `http://localhost/?code=...` URL. The page does not load; that is expected.
-  - The token is saved to `data/strava-token.json` (mode 0600) and refreshed automatically.
+  - The token is saved to `auth/strava-token.json` (mode 0600) and refreshed automatically.
 
 ## Usage
 
@@ -29,8 +29,8 @@
 | `just upload --dry-run` | Writes FIT files to `data/fit/<t>.fit`, prints activity name and description |
 | `just upload` | Uploads pending trainings to Strava |
 
-- `data/`, `.env` and `cookies*.txt` are gitignored.
-- `data/strava-uploaded.json` maps training start time to Strava activity id. Trainings listed there are skipped.
+- `data/`, `auth/`, `state/`, `.env` and `cookies*.txt` are gitignored.
+- `state/strava-uploaded.json` maps training start time to Strava activity id. Trainings listed there are skipped.
 - Re-uploading a training produces an identical FIT file, which Strava rejects as a duplicate; the error records the existing activity id. `external_id` (`milon-<t>.fit`) is only stored.
 
 ## Limits

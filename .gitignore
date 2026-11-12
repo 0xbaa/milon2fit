@@ -1,6 +1,8 @@
 cookies*.txt
 tmp/
 data/
+auth/
+state/
 .venv/
 .direnv/
 __pycache__/
