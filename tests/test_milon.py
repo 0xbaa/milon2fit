@@ -1,4 +1,4 @@
-from datetime import datetime
+import pytest
 
 from milon_export import (
     attendance_months,
@@ -10,58 +10,52 @@ from milon_export import (
 
 COOKIES = (
     "# Netscape HTTP Cookie File\n\n"
-    ".www.milonme.com\tTRUE\t/api\tTRUE\t1826031799.451\trs-token\tabc\n"
+    "#HttpOnly_.www.milonme.com\tTRUE\t/api\tTRUE\t1826031799.451\trs-token\tabc\n"
     "www.milonme.com\tFALSE\t/\tFALSE\t0\tmf\tdef\n"
 )
 
+EPOCH_2026_11_10 = 1794298668
+EPOCH_2026_10_31_2330Z = 1793489400
 
-def test_parse_cookies():
+
+def test_parse_cookies_with_httponly_prefix():
     assert parse_cookies(COOKIES) == {"rs-token": "abc", "mf": "def"}
 
 
-def test_attendance_months_skips_non_premium():
-    t1 = datetime(2026, 11, 3, 12).timestamp()
-    t2 = datetime(2026, 11, 20, 12).timestamp()
-    t3 = datetime(2026, 10, 31, 23, 30).timestamp()
+def test_parse_cookies_wrong_field_count():
+    with pytest.raises(ValueError):
+        parse_cookies("a\tb\tc\n")
+
+
+def test_attendance_months_uses_gym_timezone():
     att = [
-        {"t": t1, "type": "p"},
-        {"t": t2, "type": "p"},
-        {"t": t3, "type": "p"},
-        {"t": t1, "type": "tp"},
+        {"t": EPOCH_2026_10_31_2330Z, "type": "p"},
+        {"t": EPOCH_2026_11_10, "type": "p"},
+        {"t": EPOCH_2026_11_10, "type": "tp"},
     ]
-    assert attendance_months(att) == ["2610", "2611"]
+    assert attendance_months(att) == ["2611"]
 
 
 def test_build_payload():
-    t = datetime(2026, 11, 3, 18, 30, 5).timestamp()
+    t = EPOCH_2026_11_10
     stat = {
         "training": {"t": t, "d": 1800, "ws": 250, "moves": 120, "plan_name": "Plan A"},
         "devices": [
             {
                 "id": 2,
                 "t": t + 300,
-                "d": 60,
                 "aw": 30,
                 "adw": 25,
                 "ws": 10,
                 "moves": 12,
                 "tr_q": 90,
             },
-            {
-                "id": 1,
-                "t": t,
-                "d": 60,
-                "aw": 40,
-                "adw": 35,
-                "ws": 12,
-                "moves": 10,
-                "tr_q": 80,
-            },
+            {"id": 1, "t": t, "aw": 40, "adw": 35, "ws": 12, "moves": 10, "tr_q": 80},
         ],
     }
     devices = {"1": {"name": "LEG PRESS"}, "2": {"name": "CHEST"}}
     payload = build_payload(stat, devices)
-    assert payload["start_date_local"] == "2026-11-03T18:30:05"
+    assert payload["start_date_local"] == "2026-11-10T09:17:48"
     assert payload["elapsed_time"] == 1800
     assert payload["name"] == "milon circle Plan A"
     lines = payload["description"].splitlines()
@@ -72,9 +66,21 @@ def test_build_payload():
 
 def test_token_expired():
     assert token_expired({"expires_at": 100}, now=100)
+    assert token_expired({"expires_at": 159}, now=100)
     assert not token_expired({"expires_at": 1000}, now=100)
 
 
 def test_extract_code():
-    assert extract_code("http://localhost/?state=&code=xyz&scope=a") == "xyz"
+    url = "http://localhost/?state=&code=xyz&scope=read,activity:write"
+    assert extract_code(url) == "xyz"
     assert extract_code(" xyz\n") == "xyz"
+
+
+def test_extract_code_denied():
+    with pytest.raises(ValueError):
+        extract_code("http://localhost/?error=access_denied")
+
+
+def test_extract_code_missing_scope():
+    with pytest.raises(ValueError):
+        extract_code("http://localhost/?code=xyz&scope=read")
