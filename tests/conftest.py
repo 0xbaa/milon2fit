@@ -29,4 +29,7 @@ def devices_map():
         "1": {"name": "Q LEG PRESS"},
         "2": {"name": "Q LAT PULL V2"},
         "3": {"name": "Q ROTATOR KOMBI"},
+        "537": {"name": "Q LEG PRESS"},
+        "708": {"name": "Q LAT PULL V2"},
+        "999": {"name": "Unknown Thing"},
     }

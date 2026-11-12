@@ -234,9 +234,10 @@ def upload_training(
 def upload(dry_run: bool) -> None:
     """Upload pending trainings to Strava as FIT files.
 
-    While fit.py is unchanged, re-uploading a training produces an identical FIT
-    file, which Strava rejects as a duplicate. A crash between a successful upload
-    and the state write is then recovered on the next run via the duplicate error.
+    While fit.py and the machine names in devices.json are unchanged, re-uploading
+    a training produces an identical FIT file, which Strava rejects as a duplicate.
+    A crash between a successful upload and the state write is then recovered on
+    the next run via the duplicate error.
     """
     devices_map = read_json(MILON_DIR / "devices.json")
     uploaded = read_json(UPLOADED_FILE) if UPLOADED_FILE.exists() else {}

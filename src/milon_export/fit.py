@@ -10,12 +10,13 @@ TYPES = Profile["types"]
 
 # (keywords, FIT exercise_category, FIT <category>_exercise_name); matched against
 # the upper-cased milon machine name, first rule with any keyword as a substring
-# wins, so order matters (e.g. LATERAL RAISE must not match LAT PULL rules).
+# wins, so order matters (e.g. BUTTERFLY REV must precede BUTTERFLY).
 # name None: FIT has no matching exercise; the category alone avoids a wrong name.
 EXERCISE_RULES: list[tuple[tuple[str, ...], str, str | None]] = [
     (("ROTATOR", "TORSO TWIST"), "core", "russian_twist"),
     (("BUTTERFLY REV",), "flye", "incline_reverse_flye"),
     (("CABLETEC BUTTERFLY", "CABLETEC CROSS"), "flye", "cable_crossover"),
+    # BRUSTMASCHINE: assumed pec deck (the MILCANIC line has BANKDRÜCKER separately)
     (("BUTTERFLY", "BRUSTMASCHINE"), "flye", None),
     (("CHEST PRESS", "BANKDRÜCK", "BANK DRÜCK"), "bench_press", None),
     (
@@ -29,6 +30,7 @@ EXERCISE_RULES: list[tuple[tuple[str, ...], str, str | None]] = [
     (("LEG PRESS", "BEINPRESSE"), "squat", "leg_press"),
     (("LEG EXTENSION", "BEINSTRECKER"), "squat", None),
     (("LEG CURL", "BEINBEUGER"), "leg_curl", "weighted_leg_curl"),
+    # FIT has no seated abduction/adduction; the standing names keep the two distinct
     (("ABDUCTOR", "ABDUKTOR"), "hip_stability", "weighted_standing_hip_abduction"),
     (("ADDUCTOR", "ADDUKTOR"), "hip_stability", "weighted_standing_adduction"),
     (("ABDOMINAL", "BAUCH"), "crunch", "weighted_crunch"),
@@ -37,27 +39,38 @@ EXERCISE_RULES: list[tuple[tuple[str, ...], str, str | None]] = [
         "hyperextension",
         "weighted_spine_extension",
     ),
-    (("HIP THRUST",), "hip_raise", "barbell_hip_thrust_with_bench"),
+    (("HIP THRUST",), "hip_raise", "weighted_hip_raise"),
+    (
+        ("GLUTAEUS STEHEND", "STANDING GLUTAEUS"),
+        "hip_stability",
+        "weighted_standing_rear_leg_raise",
+    ),
     (("GLUTAEUS",), "hip_stability", "weighted_quadruped_hip_extension"),
     (("WADEN",), "calf_raise", None),
     (("BEINHEBEN", "LEG LIFTING"), "leg_raise", None),
     (("DIPS",), "triceps_extension", "weighted_dip"),
-    (("TRICEPS", "TRIZEPS"), "triceps_extension", None),
+    (("TRICEPS", "TRIZEPS"), "triceps_extension", "triceps_press"),
     (("BICEPS", "BIZEPS", "ARM CURL"), "curl", None),
 ]
 
-EXERCISE_NUMBERS: dict[str, dict[str, int]] = {
-    category: {v: k for k, v in TYPES[f"{category}_exercise_name"].items()}
-    for _, category, _ in EXERCISE_RULES
-}
+# Resolved at import time so a misspelled category or name fails immediately.
+RESOLVED_RULES: list[tuple[tuple[str, ...], str, int | None]] = [
+    (
+        keywords,
+        category,
+        None
+        if name is None
+        else {v: k for k, v in TYPES[f"{category}_exercise_name"].items()}[name],
+    )
+    for keywords, category, name in EXERCISE_RULES
+]
 
 
 def exercise_for(machine: str) -> tuple[str, int | None]:
     """FIT category and exercise-name number for a milon machine name."""
     upper = machine.upper()
-    for keywords, category, name in EXERCISE_RULES:
+    for keywords, category, number in RESOLVED_RULES:
         if any(keyword in upper for keyword in keywords):
-            number = None if name is None else EXERCISE_NUMBERS[category][name]
             return category, number
     return "unknown", None
 
@@ -66,8 +79,8 @@ def utc(t: int) -> datetime:
     return datetime.fromtimestamp(t, UTC)
 
 
-def set_mesg(index: int, dev: dict, devices_map: dict) -> dict:
-    category, subtype = exercise_for(devices_map[str(dev["id"])]["name"])
+def set_mesg(index: int, dev: dict, machine: str) -> dict:
+    category, subtype = exercise_for(machine)
     mesg = {
         "mesg_num": MESG["SET"],
         "timestamp": utc(dev["t"] + dev["d"]),
@@ -160,7 +173,7 @@ def build_fit(stat: dict, devices_map: dict) -> bytes:
         write_records(dev["t"])
         encoder.write_mesg(timer_mesg(dev["t"], "start"))
         write_records(dev["t"] + dev["d"])
-        encoder.write_mesg(set_mesg(index, dev, devices_map))
+        encoder.write_mesg(set_mesg(index, dev, devices_map[str(dev["id"])]["name"]))
         encoder.write_mesg(lap_mesg(index, dev))
         last = index == len(devs) - 1
         encoder.write_mesg(

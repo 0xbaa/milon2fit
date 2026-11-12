@@ -1,0 +1,181 @@
+ABDOMINAL CRUNCH A	crunch	weighted_crunch
+ABDOMINAL CRUNCH B	crunch	weighted_crunch
+ABDOMINAL CRUNCH C	crunch	weighted_crunch
+ABDUCTOR	hip_stability	weighted_standing_hip_abduction
+ABDUKTOR MED	hip_stability	weighted_standing_hip_abduction
+ADDUCTOR	hip_stability	weighted_standing_adduction
+ADDUKTOR MED	hip_stability	weighted_standing_adduction
+BACK EXTENSION A	hyperextension	weighted_spine_extension
+BACK EXTENSION B	hyperextension	weighted_spine_extension
+BACK EXTENSION C	hyperextension	weighted_spine_extension
+BANKDRÜCKEN MED	bench_press	
+Basic Abdominal Crunch	crunch	weighted_crunch
+Basic Abductors	hip_stability	weighted_standing_hip_abduction
+Basic Abduktoren-B	hip_stability	weighted_standing_hip_abduction
+Basic Abduktoren-C	hip_stability	weighted_standing_hip_abduction
+Basic Abduktor stehend-B	hip_stability	weighted_standing_hip_abduction
+Basic Abduktor stehend-C	hip_stability	weighted_standing_hip_abduction
+Basic Adductors	hip_stability	weighted_standing_adduction
+Basic Adduktoren-B	hip_stability	weighted_standing_adduction
+Basic Adduktoren-C	hip_stability	weighted_standing_adduction
+Basic Adduktor stehend-B	hip_stability	weighted_standing_adduction
+Basic Adduktor stehend-C	hip_stability	weighted_standing_adduction
+Basic Bank drücken	bench_press	
+Basic Bank drücken-B	bench_press	
+Basic Bank drücken-C	bench_press	
+Basic Bauch-B	crunch	weighted_crunch
+Basic Bauch-C	crunch	weighted_crunch
+Basic Beinbeuger-B	leg_curl	weighted_leg_curl
+Basic Beinbeuger-C	leg_curl	weighted_leg_curl
+Basic Beinheben stehend-B	leg_raise	
+Basic Beinheben stehend-C	leg_raise	
+Basic Beinpresse 45°-B	squat	leg_press
+Basic Beinpresse 45°-C	squat	leg_press
+Basic Beinpresse liegend-C	squat	leg_press
+Basic Beinpresse vario	squat	leg_press
+Basic Beinpresse vario-B	squat	leg_press
+Basic Beinpresse vario-C	squat	leg_press
+Basic Beinstrecker-B	squat	
+Basic Beinstrecker-C	squat	
+Basic Biceps Curl	curl	
+Basic Bizeps-B	curl	
+Basic Bizeps-C	curl	
+Basic Butterfly	flye	
+Basic Butterfly-B	flye	
+Basic Butterfly-C	flye	
+Basic Butterfly Revers	flye	incline_reverse_flye
+Basic Butterfly Revers-B	flye	incline_reverse_flye
+Basic Butterfly Revers-C	flye	incline_reverse_flye
+Basic cabletec butterfly 1	flye	cable_crossover
+Basic cabletec butterfly 2	flye	cable_crossover
+Basic cabletec cross 1	flye	cable_crossover
+Basic cabletec cross 2	flye	cable_crossover
+Basic cabletec cross 3	flye	cable_crossover
+Basic cabletec cross 4	flye	cable_crossover
+Basic cabletec lat 1	pull_up	lat_pulldown
+Basic cabletec lat 2	pull_up	lat_pulldown
+Basic cabletec low pull 1	row	seated_cable_row
+Basic cabletec low pull 2	row	seated_cable_row
+Basic cabletec row 1	row	seated_cable_row
+Basic cabletec row 2	row	seated_cable_row
+Basic cabletec universal 1	unknown	
+Basic cabletec universal 2	unknown	
+Basic cabletec universal 3	unknown	
+Basic cabletec universal 4	unknown	
+Basic cabletec universal lat 1	pull_up	lat_pulldown
+Basic cabletec universal lat 2	pull_up	lat_pulldown
+Basic cabletec universal lat 3	pull_up	lat_pulldown
+Basic cabletec universal lat 4	pull_up	lat_pulldown
+Basic Dips	triceps_extension	weighted_dip
+Basic Dips-B	triceps_extension	weighted_dip
+Basic Dips-C	triceps_extension	weighted_dip
+Basic Glutaeus liegend	hip_stability	weighted_quadruped_hip_extension
+Basic Glutaeus liegend-B	hip_stability	weighted_quadruped_hip_extension
+Basic Glutaeus liegend-C	hip_stability	weighted_quadruped_hip_extension
+Basic Glutaeus stehend-B	hip_stability	weighted_standing_rear_leg_raise
+Basic Glutaeus stehend-C	hip_stability	weighted_standing_rear_leg_raise
+Basic Lat Pulldown	pull_up	lat_pulldown
+Basic Latzug-B	pull_up	lat_pulldown
+Basic Latzug-C	pull_up	lat_pulldown
+Basic Leg Curl	leg_curl	weighted_leg_curl
+Basic Leg Extension	squat	
+Basic Leg lifting standing	leg_raise	
+Basic Leg Press 45°	squat	leg_press
+Basic Rotator links-B	core	russian_twist
+Basic Rotator links-C	core	russian_twist
+Basic Rotator rechts-B	core	russian_twist
+Basic Rotator rechts-C	core	russian_twist
+Basic Row	row	seated_cable_row
+Basic Rudermaschine-B	row	seated_cable_row
+Basic Rudermaschine-C	row	seated_cable_row
+Basic Schulterpresse-B	shoulder_press	
+Basic Schulterpresse-C	shoulder_press	
+Basic Shoulder Press	shoulder_press	
+Basic Standing Abductor	hip_stability	weighted_standing_hip_abduction
+Basic Standing Adductor	hip_stability	weighted_standing_adduction
+Basic Standing Glutaeus	hip_stability	weighted_standing_rear_leg_raise
+Basic Torso Twist left	core	russian_twist
+Basic Torso Twist right	core	russian_twist
+Basic Unterer Rücken	hyperextension	weighted_spine_extension
+Basic Unterer Rücken-B	hyperextension	weighted_spine_extension
+Basic Unterer Rücken-C	hyperextension	weighted_spine_extension
+Basic Wadenmaschine-C	calf_raise	
+BAUCHBEUGER B MED	crunch	weighted_crunch
+BAUCHBEUGER C MED	crunch	weighted_crunch
+BEINBEUGER MED	leg_curl	weighted_leg_curl
+BEINBEUGER PP MED	leg_curl	weighted_leg_curl
+BEINPRESSE 45° MED	squat	leg_press
+BEINPRESSE VARIO MED	squat	leg_press
+BEINSTRECKER MED	squat	
+BICEPS CURL	curl	
+BIZEPS MED	curl	
+BUTTERFLY	flye	
+BUTTERFLY MED	flye	
+BUTTERFLY REVERSE	flye	incline_reverse_flye
+BUTTERFLY REVERSE MED	flye	incline_reverse_flye
+CHEST PRESS	bench_press	
+LAT PULLDOWN	pull_up	lat_pulldown
+LATZUG MED	pull_up	lat_pulldown
+LEG CURL	leg_curl	weighted_leg_curl
+LEG CURL PP	leg_curl	weighted_leg_curl
+LEG EXTENSION	squat	
+LEG PRESS 45°	squat	leg_press
+LEG PRESS VARIO	squat	leg_press
+MILBRATION PLATE A	unknown	
+MILBRATION PLATE B	unknown	
+MILBRATION PLATE C	unknown	
+MILCANIC ABDOMINAL CRUNCH (seated)	crunch	weighted_crunch
+MILCANIC ABDUCTOR	hip_stability	weighted_standing_hip_abduction
+MILCANIC ADDUCTOR	hip_stability	weighted_standing_adduction
+MILCANIC ARM CURL	curl	
+MILCANIC BACK EXTENSION	hyperextension	weighted_spine_extension
+MILCANIC BACK PULLDOWN	pull_up	lat_pulldown
+MILCANIC BANKDRÜCKER A	bench_press	
+MILCANIC BANKDRÜCKER B	bench_press	
+MILCANIC BRUSTMASCHINE	flye	
+MILCANIC LATERAL RAISE	lateral_raise	seated_lateral_raise
+MILCANIC LEG EXTENSION	squat	
+MILCANIC LEG PRESS	squat	leg_press
+MILCANIC LYING LEG CURL	leg_curl	weighted_leg_curl
+MILCANIC RUDERMASCHINE	row	seated_cable_row
+MILCANIC SCHULTERDRÜCK A	shoulder_press	
+MILCANIC SCHULTERDRÜCK B	shoulder_press	
+MILCANIC SEATED LEG CURL	leg_curl	weighted_leg_curl
+Q ABDOMINAL CRUNCH	crunch	weighted_crunch
+Q ABDUCTOR	hip_stability	weighted_standing_hip_abduction
+Q ADDUCTOR	hip_stability	weighted_standing_adduction
+Q BACK EXTENSION	hyperextension	weighted_spine_extension
+Q BICEPS	curl	
+Q BUTTERFLY	flye	
+Q BUTTERFLY REV	flye	incline_reverse_flye
+Q CHEST PRESS	bench_press	
+Q DIPS	triceps_extension	weighted_dip
+Q HIP THRUST	hip_raise	weighted_hip_raise
+Q LAT PULL	pull_up	lat_pulldown
+Q LAT PULL V2	pull_up	lat_pulldown
+Q LEG CURL	leg_curl	weighted_leg_curl
+Q LEG EXTENSION	squat	
+Q LEG PRESS	squat	leg_press
+Q LEG PRESS V2	squat	leg_press
+Q ROTATOR KOMBI	core	russian_twist
+Q ROTATOR LINKS	core	russian_twist
+Q ROTATOR RECHTS	core	russian_twist
+Q SEATED ROW	row	seated_cable_row
+Q SHOULDER PRESS	shoulder_press	
+Q SHOULDER PRESS V2	shoulder_press	
+Q TRICEPS	triceps_extension	triceps_press
+ROTATOR COMBI	core	russian_twist
+ROTATOR KOMBI MED	core	russian_twist
+ROTATOR LEFT	core	russian_twist
+ROTATOR LINKS MED	core	russian_twist
+ROTATOR RECHTS MED	core	russian_twist
+ROTATOR RIGHT	core	russian_twist
+RÜCKENSTRECKER B MED	hyperextension	weighted_spine_extension
+RÜCKENSTRECKER C MED	hyperextension	weighted_spine_extension
+RUDERN MED	row	seated_cable_row
+SCHULTERPRESSE MED	shoulder_press	
+SEATED DIPS	triceps_extension	weighted_dip
+SEATED ROW	row	seated_cable_row
+SHOULDER PRESS	shoulder_press	
+TRIZEPS MED	triceps_extension	triceps_press
+未知裝置	unknown	

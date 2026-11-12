@@ -61,7 +61,7 @@ just garmin
   - Create an app at https://www.strava.com/settings/api with Authorization Callback Domain `localhost`.
   - Put `STRAVA_CLIENT_ID` and `STRAVA_CLIENT_SECRET` in `.env`.
   - Run `just strava-auth`, open the printed URL, approve, then paste the redirected `http://localhost/?code=...` URL. The page does not load; that is expected. The token is saved to `auth/strava-token.json` (mode 0600) and refreshed automatically.
-  - `just upload [--dry-run]` uploads pending trainings and sets name, description and sport type. State is `state/strava-uploaded.json`. Strava rejects re-uploads of an identical FIT file as duplicates (identical while `fit.py` is unchanged); the error records the existing activity id.
+  - `just upload [--dry-run]` uploads pending trainings and sets name, description and sport type. State is `state/strava-uploaded.json`. Strava rejects re-uploads of an identical FIT file as duplicates (identical while `fit.py` and the machine names in `devices.json` are unchanged); the error records the existing activity id.
 
 ## Limits
 
@@ -69,7 +69,7 @@ just garmin
 - Only premium circle trainings (`p` attendance); other types are skipped with a warning.
 - milon provides no per-rep or heart-rate series; the FIT file has sets and laps only.
 - Timestamps are UTC epochs. Only the month bucketing of attendance uses `Europe/Zurich` (`GYM_TZ`).
-- Station to FIT exercise mapping is the `EXERCISES` dict in `src/milon_export/fit.py`; unmapped stations use category `unknown`.
+- Machine to FIT exercise mapping is `EXERCISE_RULES` in `src/milon_export/fit.py`: ordered keyword rules on the machine name, first match wins; unmatched machines use category `unknown`.
 - The "t moved" figure is the concentric volume (sum of average weight times moves); it is not verified against milon's own counter.
 
 ## Development
