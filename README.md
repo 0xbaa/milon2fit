@@ -16,7 +16,7 @@ Sends a milon ME training to the Strava upload page with the FIT file, title and
 | Browser | Steps |
 |---|---|
 | Firefox 140+ | Download the `.xpi` from the [latest release](https://github.com/0xbaa/milon2fit/releases/latest). Open it from the download panel, or `about:addons`, gear menu, Install Add-on From File. Updates install automatically. Clicking the `.xpi` link on GitHub may install it directly. |
-| Chrome | Download `milon_to_strava-X.Y.Z.zip` from the latest release (not "Source code (zip)") and unzip it. Open `chrome://extensions`, enable Developer mode, click Load unpacked, pick the unzipped folder. Updates are manual. |
+| Chrome | Download `milon_to_strava-X.Y.Z.zip` from the [latest release](https://github.com/0xbaa/milon2fit/releases/latest) (not "Source code (zip)") and unzip it. Open `chrome://extensions`, enable Developer mode, click Load unpacked, pick the unzipped folder. Updates are manual. |
 
 ### Usage
 
