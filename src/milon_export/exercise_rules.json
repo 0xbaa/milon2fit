@@ -1,0 +1,199 @@
+[
+  {
+    "keywords": [
+      "ROTATOR",
+      "TORSO TWIST"
+    ],
+    "category": "core",
+    "name": "russian_twist"
+  },
+  {
+    "keywords": [
+      "BUTTERFLY REV"
+    ],
+    "category": "flye",
+    "name": "incline_reverse_flye",
+    "note": "Order matters: BUTTERFLY REV must precede BUTTERFLY"
+  },
+  {
+    "keywords": [
+      "CABLETEC BUTTERFLY",
+      "CABLETEC CROSS"
+    ],
+    "category": "flye",
+    "name": "cable_crossover"
+  },
+  {
+    "keywords": [
+      "BUTTERFLY",
+      "BRUSTMASCHINE"
+    ],
+    "category": "flye",
+    "name": null,
+    "note": "BRUSTMASCHINE: assumed pec deck (the MILCANIC line has BANKDRÜCKER separately)"
+  },
+  {
+    "keywords": [
+      "CHEST PRESS",
+      "BANKDRÜCK",
+      "BANK DRÜCK"
+    ],
+    "category": "bench_press",
+    "name": null
+  },
+  {
+    "keywords": [
+      "LAT PULL",
+      "LATZUG",
+      "PULLDOWN",
+      "CABLETEC LAT",
+      "UNIVERSAL LAT"
+    ],
+    "category": "pull_up",
+    "name": "lat_pulldown"
+  },
+  {
+    "keywords": [
+      "LATERAL RAISE"
+    ],
+    "category": "lateral_raise",
+    "name": "seated_lateral_raise"
+  },
+  {
+    "keywords": [
+      "LOW PULL",
+      "ROW",
+      "RUDER"
+    ],
+    "category": "row",
+    "name": "seated_cable_row"
+  },
+  {
+    "keywords": [
+      "SHOULDER PRESS",
+      "SCHULTERPRESSE",
+      "SCHULTERDRÜCK"
+    ],
+    "category": "shoulder_press",
+    "name": null
+  },
+  {
+    "keywords": [
+      "LEG PRESS",
+      "BEINPRESSE"
+    ],
+    "category": "squat",
+    "name": "leg_press"
+  },
+  {
+    "keywords": [
+      "LEG EXTENSION",
+      "BEINSTRECKER"
+    ],
+    "category": "squat",
+    "name": null
+  },
+  {
+    "keywords": [
+      "LEG CURL",
+      "BEINBEUGER"
+    ],
+    "category": "leg_curl",
+    "name": "weighted_leg_curl"
+  },
+  {
+    "keywords": [
+      "ABDUCTOR",
+      "ABDUKTOR"
+    ],
+    "category": "hip_stability",
+    "name": "weighted_standing_hip_abduction",
+    "note": "FIT has no seated abduction/adduction; the standing names keep the two distinct"
+  },
+  {
+    "keywords": [
+      "ADDUCTOR",
+      "ADDUKTOR"
+    ],
+    "category": "hip_stability",
+    "name": "weighted_standing_adduction"
+  },
+  {
+    "keywords": [
+      "ABDOMINAL",
+      "BAUCH"
+    ],
+    "category": "crunch",
+    "name": "weighted_crunch"
+  },
+  {
+    "keywords": [
+      "BACK EXTENSION",
+      "RÜCKENSTRECKER",
+      "UNTERER RÜCKEN"
+    ],
+    "category": "hyperextension",
+    "name": "weighted_spine_extension"
+  },
+  {
+    "keywords": [
+      "HIP THRUST"
+    ],
+    "category": "hip_raise",
+    "name": "weighted_hip_raise"
+  },
+  {
+    "keywords": [
+      "GLUTAEUS STEHEND",
+      "STANDING GLUTAEUS"
+    ],
+    "category": "hip_stability",
+    "name": "weighted_standing_rear_leg_raise"
+  },
+  {
+    "keywords": [
+      "GLUTAEUS"
+    ],
+    "category": "hip_stability",
+    "name": "weighted_quadruped_hip_extension"
+  },
+  {
+    "keywords": [
+      "WADEN"
+    ],
+    "category": "calf_raise",
+    "name": null
+  },
+  {
+    "keywords": [
+      "BEINHEBEN",
+      "LEG LIFTING"
+    ],
+    "category": "leg_raise",
+    "name": null
+  },
+  {
+    "keywords": [
+      "DIPS"
+    ],
+    "category": "triceps_extension",
+    "name": "weighted_dip"
+  },
+  {
+    "keywords": [
+      "TRICEPS",
+      "TRIZEPS"
+    ],
+    "category": "triceps_extension",
+    "name": "triceps_press"
+  },
+  {
+    "keywords": [
+      "BICEPS",
+      "BIZEPS",
+      "ARM CURL"
+    ],
+    "category": "curl",
+    "name": null
+  }
+]

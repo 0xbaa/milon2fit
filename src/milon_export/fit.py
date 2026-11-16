@@ -1,4 +1,6 @@
+import json
 from datetime import UTC, datetime
+from pathlib import Path
 
 from garmin_fit_sdk import Encoder, Profile
 
@@ -8,49 +10,13 @@ from milon_export.training import GYM_TZ, training_window
 MESG = Profile["mesg_num"]
 TYPES = Profile["types"]
 
-# (keywords, FIT exercise_category, FIT <category>_exercise_name); matched against
-# the upper-cased milon machine name, first rule with any keyword as a substring
-# wins, so order matters (e.g. BUTTERFLY REV must precede BUTTERFLY).
-# name None: FIT has no matching exercise; the category alone avoids a wrong name.
+# Each rule: keywords matched against the upper-cased milon machine name; the first
+# rule with any keyword as a substring wins, so file order matters. "name": null means
+# FIT has no matching exercise and the category alone avoids a wrong name.
+RULES_FILE = Path(__file__).with_name("exercise_rules.json")
 EXERCISE_RULES: list[tuple[tuple[str, ...], str, str | None]] = [
-    (("ROTATOR", "TORSO TWIST"), "core", "russian_twist"),
-    (("BUTTERFLY REV",), "flye", "incline_reverse_flye"),
-    (("CABLETEC BUTTERFLY", "CABLETEC CROSS"), "flye", "cable_crossover"),
-    # BRUSTMASCHINE: assumed pec deck (the MILCANIC line has BANKDRÜCKER separately)
-    (("BUTTERFLY", "BRUSTMASCHINE"), "flye", None),
-    (("CHEST PRESS", "BANKDRÜCK", "BANK DRÜCK"), "bench_press", None),
-    (
-        ("LAT PULL", "LATZUG", "PULLDOWN", "CABLETEC LAT", "UNIVERSAL LAT"),
-        "pull_up",
-        "lat_pulldown",
-    ),
-    (("LATERAL RAISE",), "lateral_raise", "seated_lateral_raise"),
-    (("LOW PULL", "ROW", "RUDER"), "row", "seated_cable_row"),
-    (("SHOULDER PRESS", "SCHULTERPRESSE", "SCHULTERDRÜCK"), "shoulder_press", None),
-    (("LEG PRESS", "BEINPRESSE"), "squat", "leg_press"),
-    (("LEG EXTENSION", "BEINSTRECKER"), "squat", None),
-    (("LEG CURL", "BEINBEUGER"), "leg_curl", "weighted_leg_curl"),
-    # FIT has no seated abduction/adduction; the standing names keep the two distinct
-    (("ABDUCTOR", "ABDUKTOR"), "hip_stability", "weighted_standing_hip_abduction"),
-    (("ADDUCTOR", "ADDUKTOR"), "hip_stability", "weighted_standing_adduction"),
-    (("ABDOMINAL", "BAUCH"), "crunch", "weighted_crunch"),
-    (
-        ("BACK EXTENSION", "RÜCKENSTRECKER", "UNTERER RÜCKEN"),
-        "hyperextension",
-        "weighted_spine_extension",
-    ),
-    (("HIP THRUST",), "hip_raise", "weighted_hip_raise"),
-    (
-        ("GLUTAEUS STEHEND", "STANDING GLUTAEUS"),
-        "hip_stability",
-        "weighted_standing_rear_leg_raise",
-    ),
-    (("GLUTAEUS",), "hip_stability", "weighted_quadruped_hip_extension"),
-    (("WADEN",), "calf_raise", None),
-    (("BEINHEBEN", "LEG LIFTING"), "leg_raise", None),
-    (("DIPS",), "triceps_extension", "weighted_dip"),
-    (("TRICEPS", "TRIZEPS"), "triceps_extension", "triceps_press"),
-    (("BICEPS", "BIZEPS", "ARM CURL"), "curl", None),
+    (tuple(rule["keywords"]), rule["category"], rule["name"])
+    for rule in json.loads(RULES_FILE.read_text())
 ]
 
 # Resolved at import time so a misspelled category or name fails immediately.
