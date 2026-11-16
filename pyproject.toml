@@ -5,6 +5,7 @@ description = "Export milon ME training data and upload to Strava"
 authors = [
     { name = "0xbaa", email = "92133417+0xbaa@users.noreply.github.com" }
 ]
+license = "MIT"
 requires-python = ">=3.14"
 dependencies = [
     "garmin-fit-sdk>=21.221.0",

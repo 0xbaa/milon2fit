@@ -1,16 +1,53 @@
 # milon-export
 
-- Exports milon ME gym training data (premium circle trainings) to JSON.
-- Converts each training to a FIT strength activity: sport training, sub-sport strength training, one set per station round with exercise, reps and weight.
-- Uploads the FIT files to Garmin Connect, which syncs them to Strava. Strava builds its muscle map from the sets.
+milon ME (gym circle training) has no export. This project gets milon trainings onto Strava and Garmin Connect as strength activities with one set per station round (exercise, reps, weight). Strava builds its muscle map from the sets.
 
-## Requirements
+- Browser extension: on milonme.com, send a training to the Strava upload page, prefilled.
+- Command-line tool: exports milon data to JSON, builds FIT files, uploads them to Garmin Connect, which forwards them to Strava.
+
+Not affiliated with milon, Strava or Garmin. The milon web API and the `garminconnect` library are unofficial and can break without notice.
+
+## Browser extension
+
+Sends a milon ME training to the Strava upload page with the FIT file, title and per-station description filled in. Nothing is saved to Strava until Save is clicked.
+
+### Install
+
+| Browser | Steps |
+|---|---|
+| Firefox 140+ | Download the `.xpi` from the [latest release](https://github.com/0xbaa/milon2fit/releases/latest). Open it from the download panel, or `about:addons`, gear menu, Install Add-on From File. Updates install automatically. Clicking the `.xpi` link on GitHub may install it directly. |
+| Chrome | Download `milon_to_strava-X.Y.Z.zip` from the latest release (not "Source code (zip)") and unzip it. Open `chrome://extensions`, enable Developer mode, click Load unpacked, pick the unzipped folder. Updates are manual. |
+
+### Usage
+
+1. Log in at https://www.milonme.com and at https://www.strava.com in the same browser.
+2. On milonme.com click "milon → Strava" (bottom right). The panel lists trainings, newest first.
+3. Click "Strava". The Strava upload page opens, the file is uploaded, title and description are filled, and the training is marked "sent".
+4. Review the form, click Save on Strava.
+5. "FIT" downloads the file for a manual Garmin Connect or Strava upload.
+
+- Strava reports a training uploaded twice as a duplicate (matched by start time).
+- Errors appear as one line in the panel or in a banner on the Strava page.
+
+### Privacy
+
+- The extension runs only in the browser, on `www.milonme.com` and `www.strava.com/upload/select`.
+- No server, no analytics. No credentials leave the browser; it uses the existing milon and Strava sessions.
+
+### Limits
+
+- A change to the Strava upload page can break the prefill.
+- The user clicks Save; the extension never saves.
+
+## Command-line tool
+
+### Requirements
 
 - nix with flakes; `nix develop` provides python, uv, ruff, just, jq, nodejs, biome.
-- direnv (optional): `.envrc` runs `use flake` and loads `.env`.
-- `pass` (password-store) with an entry `garmin.com` whose first line is the Garmin password.
+- direnv (optional): `.envrc` runs `use flake`.
+- A password source for Garmin: a command such as `pass show garmin.com`, or the plaintext password.
 
-## Setup
+### Setup
 
 1. Enter the environment: `nix develop`, or `direnv allow`.
 2. milon cookies:
@@ -20,11 +57,21 @@
 3. Garmin Connect:
    - Create a free account at https://connect.garmin.com (no Garmin device needed).
    - Link Strava: Garmin Connect, Settings, Connected Apps, Strava. Activities uploaded to Garmin are then forwarded to Strava.
-   - Put `GARMIN_EMAIL=...` in `.env`.
-   - Run `just garmin-login` in a terminal. It reads the password via `pass show garmin.com` and prompts for the MFA code if enabled. Tokens are saved to `~/.local/state/milon-export/garmin/`, outside the repo, so a sandboxed Claude Code session in this repo cannot read them.
-   - `just garmin` uses only the saved tokens. On auth errors run `just garmin-login` again.
+4. Configuration: `cp .env.example .env` and edit. The justfile loads `.env` (`set dotenv-load`).
 
-## Usage
+   | Variable | Meaning |
+   |---|---|
+   | `GARMIN_EMAIL` | Garmin account email |
+   | `GARMIN_PASSWORD_COMMAND` | Command whose first stdout line is the password, e.g. `pass show garmin.com`. Split with `shlex`, run without a shell. |
+   | `GARMIN_PASSWORD` | Plaintext password |
+   | `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET` | Strava API path only (see Alternatives) |
+
+   - Exactly one of `GARMIN_PASSWORD_COMMAND` and `GARMIN_PASSWORD` must be set; otherwise the login fails.
+   - Values containing spaces must be double-quoted, e.g. `GARMIN_PASSWORD_COMMAND="pass show garmin.com"`.
+5. Run `just garmin-login` in a terminal. It prompts for the MFA code if enabled. Tokens are saved to `~/.local/state/milon-export/garmin/`, outside the repo.
+6. `just garmin` uses only the saved tokens. On auth errors run `just garmin-login` again.
+
+### Usage
 
 After each gym visit:
 
@@ -41,15 +88,19 @@ just garmin
 
 - `<t>` is the training start as a Unix timestamp.
 - `state/garmin-uploaded.json` maps `<t>` to the Garmin activity id. Trainings listed there are skipped.
-- Re-upload a training: delete it on Garmin Connect, remove its `<t>` entry from `state/garmin-uploaded.json`, run `just garmin`. A training still present on Garmin is reported as a duplicate; its id is looked up and name and description are set again, but Garmin does not forward it to Strava again.
-- Strava de-duplicates by start time, also against deleted activities: a training that was on Strava once is not accepted again via Garmin. Workaround used once: re-upload with all timestamps shifted by 60 s.
 - `data/`, `auth/`, `state/`, `.env` and `cookies*.txt` are gitignored.
 
-## What shows where
+### Re-upload
+
+- Delete the training on Garmin Connect, remove its `<t>` entry from `state/garmin-uploaded.json`, run `just garmin`.
+- A training still present on Garmin is reported as a duplicate; its id is looked up and name and description are set again, but Garmin does not forward it to Strava again.
+- Strava de-duplicates by start time, also against deleted activities: a training that was on Strava once is not accepted again via Garmin. Workaround: re-upload with all timestamps shifted by 60 s.
+
+### What shows where
 
 | | Garmin Connect | Strava (via Garmin) |
 |---|---|---|
-| Title | `Boomer Pump Circuit` (`ACTIVITY_NAME` in `describe.py`) | Strava default, e.g. "Lunch Weight Training" |
+| Title | `Boomer Pump Circuit` (`ACTIVITY_NAME` in `src/milon_export/describe.py`) | Strava default, e.g. "Lunch Weight Training" |
 | Description | per-station summary | none (name and description are set on Garmin after the forward) |
 | Sets, muscle map | yes | yes |
 | Visibility | Garmin privacy setting | Strava default activity visibility (Settings, Privacy Controls) |
@@ -65,7 +116,7 @@ just garmin
 
 ## Limits
 
-- Garmin upload uses the unofficial `garminconnect` library; Garmin may change its API and break it.
+- The milon API and `garminconnect` are unofficial; either may change and break the tool.
 - Only premium circle trainings (`p` attendance); other types are skipped with a warning.
 - milon provides no per-rep or heart-rate series; the FIT file has sets and laps only.
 - Timestamps are UTC epochs. Only the month bucketing of attendance uses `Europe/Zurich` (`GYM_TZ`).
@@ -74,40 +125,22 @@ just garmin
 
 ## Development
 
-- `just check` runs ruff format, ruff check, biome format, biome lint, pytest and `node --test`. `just fmt-check` is the non-writing format check used in CI.
 - `npm ci` installs JS dependencies once.
+- `just check` runs ruff format, ruff check, biome format, biome lint, pytest and `node --test`. `just fmt-check` is the non-writing format check used in CI.
+- Extension build:
+  - `just ext-build`: bundles `js/milon.js` and `js/strava.js` into `extension/`, then `web-ext lint`.
+  - `just ext-zip`: Chrome zip in `web-ext-artifacts/`.
+  - `just ext-sign`: AMO unlisted signing, used by CI only.
+  - Local run, after `just ext-build`: `npx web-ext run --source-dir extension` (Firefox) or load `extension/` unpacked (Chrome).
 
-## Browser extension
-
-Sends a milon ME training to the Strava upload page, prefilled with the FIT file, title and per-station description. Nothing is saved to Strava until Save is clicked.
-
-### Install (friends)
-
-- Firefox 140 or newer: open the latest release page, click the `.xpi` file, confirm. Updates install automatically via `updates.json`.
-  - Fallback if Firefox downloads the file instead of installing: open the download panel and click the file, or `about:addons`, gear menu, Install Add-on From File.
-  - Unconfirmed: verify the direct install on the first release.
-- Chrome: download the `.zip` from the latest release and unzip it. Open `chrome://extensions`, enable Developer mode, click Load unpacked, pick the unzipped folder. Updates are manual.
-
-### Usage
-
-- Log in at www.milonme.com and at Strava in the same browser.
-- On milonme.com click "milon → Strava" (bottom right). The panel lists trainings newest first.
-- "Strava" opens the Strava upload page, uploads the file, fills title and description, and marks the training "sent". Review the form and click Save.
-- "FIT" downloads the file for a manual Garmin Connect or Strava upload.
-- Strava reports a training uploaded twice as a duplicate (matched by start time).
-- Errors appear as one line in the panel or in a banner on the Strava page.
-
-### Build
-
-- `just ext-build`: bundles `js/milon.js` and `js/strava.js` into `extension/`, then `web-ext lint`.
-- `just ext-zip`: Chrome zip in `web-ext-artifacts/`.
-- `just ext-sign`: AMO unlisted signing, used by CI only; CI is the only signing path.
-- Local run: `npx web-ext run --source-dir extension` (Firefox) or load `extension/` unpacked (Chrome).
-
-### Release (maintainer)
+## Release (maintainer)
 
 - One-time: create an AMO API key at addons.mozilla.org, Tools, Manage API Keys. Add repo secrets `WEB_EXT_API_KEY` (JWT issuer) and `WEB_EXT_API_SECRET`.
 - The repo must be public: `gecko.update_url` in `extension/manifest.json` points to `https://github.com/0xbaa/milon2fit/releases/latest/download/updates.json`. Change it if the repo path differs.
-- Bump `version` in `extension/manifest.json` (the only place the version lives), commit, then `git tag vX.Y.Z` and `git push --tags`.
+- Bump `version` in `extension/manifest.json` (the only place the extension version lives), commit, then `git tag vX.Y.Z` and `git push --tags`.
 - A release that fails after signing needs a version bump and a new tag, because AMO rejects a version it has already signed.
-- `.github/workflows/release.yml` checks tag against manifest, runs `just check`, builds, signs with AMO, and creates the GitHub release with the `.xpi`, the Chrome zip and `updates.json`.
+- `.github/workflows/release.yml` checks tag against manifest, runs `just fmt-check lint test`, builds, signs with AMO, and creates the GitHub release with the `.xpi`, the Chrome zip and `updates.json`.
+
+## License
+
+MIT, see `LICENSE`.
