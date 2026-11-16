@@ -135,11 +135,11 @@ just garmin
 
 ## Release (maintainer)
 
-- One-time: create an AMO API key at addons.mozilla.org, Tools, Manage API Keys. Add repo secrets `WEB_EXT_API_KEY` (JWT issuer) and `WEB_EXT_API_SECRET`.
+- Optional, Firefox only: create an AMO API key at addons.mozilla.org, Tools, Manage API Keys. Add repo secrets `WEB_EXT_API_KEY` (JWT issuer) and `WEB_EXT_API_SECRET`. Without `WEB_EXT_API_KEY` the release has only the Chrome zip.
 - The repo must be public: `gecko.update_url` in `extension/manifest.json` points to `https://github.com/0xbaa/milon2fit/releases/latest/download/updates.json`. Change it if the repo path differs.
 - Bump `version` in `extension/manifest.json` (the only place the extension version lives), commit, then `git tag vX.Y.Z` and `git push --tags`.
 - A release that fails after signing needs a version bump and a new tag, because AMO rejects a version it has already signed.
-- `.github/workflows/release.yml` checks tag against manifest, runs `just fmt-check lint test`, builds, signs with AMO, and creates the GitHub release with the `.xpi`, the Chrome zip and `updates.json`.
+- `.github/workflows/release.yml` checks tag against manifest, runs `just fmt-check lint test`, builds the Chrome zip, signs the `.xpi` with AMO if `WEB_EXT_API_KEY` is set, and creates the GitHub release with the Chrome zip plus, when signed, the `.xpi` and `updates.json`.
 
 ## License
 

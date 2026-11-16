@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "milon to Strava",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Send milon ME trainings to the Strava upload page.",
   "permissions": [
     "storage"

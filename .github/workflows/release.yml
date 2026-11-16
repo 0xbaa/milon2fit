@@ -26,7 +26,18 @@ jobs:
         run: nix develop -c just fmt-check lint test
       - name: Build and zip
         run: nix develop -c just ext-zip
+      - name: Check for AMO keys
+        id: amo
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+        run: |
+          if [ -n "$WEB_EXT_API_KEY" ]; then
+            echo "sign=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::WEB_EXT_API_KEY not set, releasing without a signed Firefox add-on"
+          fi
       - name: Sign with AMO
+        if: steps.amo.outputs.sign == 'true'
         env:
           WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
           WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
@@ -34,10 +45,12 @@ jobs:
           git archive --format=zip -o "$RUNNER_TEMP/source.zip" HEAD
           nix develop -c just ext-sign --upload-source-code "$RUNNER_TEMP/source.zip"
       - uses: actions/upload-artifact@v4
+        if: steps.amo.outputs.sign == 'true'
         with:
           name: web-ext-artifacts
           path: web-ext-artifacts/
       - name: Generate updates.json
+        if: steps.amo.outputs.sign == 'true'
         run: |
           xpi="$(ls web-ext-artifacts/*.xpi)"
           version="$(nix develop -c jq -r .version extension/manifest.json)"
@@ -51,5 +64,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          shopt -s nullglob
           gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes \
-            web-ext-artifacts/*.xpi web-ext-artifacts/*.zip web-ext-artifacts/updates.json
+            web-ext-artifacts/*.zip web-ext-artifacts/*.xpi web-ext-artifacts/updates.json*
