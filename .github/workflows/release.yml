@@ -1,0 +1,55 @@
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - name: Tag matches manifest version
+        run: |
+          expected="v$(nix develop -c jq -r .version extension/manifest.json)"
+          if [ "$expected" != "$GITHUB_REF_NAME" ]; then
+            echo "tag $GITHUB_REF_NAME does not match manifest version $expected" >&2
+            exit 1
+          fi
+      - name: Install dependencies
+        run: nix develop -c npm ci
+      - name: Check
+        run: nix develop -c just fmt-check lint test
+      - name: Build and zip
+        run: nix develop -c just ext-zip
+      - name: Sign with AMO
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.WEB_EXT_API_KEY }}
+          WEB_EXT_API_SECRET: ${{ secrets.WEB_EXT_API_SECRET }}
+        run: |
+          git archive --format=zip -o "$RUNNER_TEMP/source.zip" HEAD
+          nix develop -c just ext-sign --upload-source-code "$RUNNER_TEMP/source.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-ext-artifacts
+          path: web-ext-artifacts/
+      - name: Generate updates.json
+        run: |
+          xpi="$(ls web-ext-artifacts/*.xpi)"
+          version="$(nix develop -c jq -r .version extension/manifest.json)"
+          hash="sha256:$(sha256sum "$xpi" | cut -d' ' -f1)"
+          url="https://github.com/${GITHUB_REPOSITORY}/releases/download/${GITHUB_REF_NAME}/$(basename "$xpi")"
+          nix develop -c jq -n \
+            --arg version "$version" --arg url "$url" --arg hash "$hash" \
+            '{addons: {"milon2fit@0xbaa": {updates: [{version: $version, update_link: $url, update_hash: $hash}]}}}' \
+            > web-ext-artifacts/updates.json
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --generate-notes \
+            web-ext-artifacts/*.xpi web-ext-artifacts/*.zip web-ext-artifacts/updates.json
