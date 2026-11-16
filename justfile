@@ -1,3 +1,5 @@
+set dotenv-load
+
 export:
     uv run milon export
 

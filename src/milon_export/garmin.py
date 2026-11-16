@@ -1,7 +1,9 @@
 import logging
 import os
+import shlex
 import subprocess
 import time
+from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 from pathlib import Path
@@ -10,7 +12,6 @@ from garminconnect import Garmin
 from garminconnect.exceptions import GarminConnectConnectionError
 
 GARMIN_DIR = Path.home() / ".local/state/milon-export/garmin"
-PASS_ENTRY = "garmin.com"
 LOOKUP_ATTEMPTS = 10
 LOOKUP_INTERVAL = 3
 START_TOLERANCE = 1
@@ -51,19 +52,30 @@ def wait_for_activity(api: Garmin, start: int) -> int:
     raise RuntimeError(f"garmin activity starting at {start} not found")
 
 
-def pass_secret(entry: str) -> str:
-    """First line of `pass show <entry>` (password-store convention)."""
-    out = subprocess.run(
-        ["pass", "show", entry], stdout=subprocess.PIPE, text=True, check=True
-    )
-    return out.stdout.splitlines()[0]
+def garmin_password(env: Mapping[str, str]) -> str:
+    """GARMIN_PASSWORD, or first stdout line of GARMIN_PASSWORD_COMMAND."""
+    if ("GARMIN_PASSWORD" in env) == ("GARMIN_PASSWORD_COMMAND" in env):
+        raise RuntimeError(
+            "set exactly one of GARMIN_PASSWORD and GARMIN_PASSWORD_COMMAND"
+        )
+    if "GARMIN_PASSWORD" in env:
+        name, password = "GARMIN_PASSWORD", env["GARMIN_PASSWORD"]
+    else:
+        name = "GARMIN_PASSWORD_COMMAND"
+        out = subprocess.run(
+            shlex.split(env[name]), stdout=subprocess.PIPE, text=True, check=True
+        )
+        password = next(iter(out.stdout.splitlines()), "")
+    if not password:
+        raise RuntimeError(f"{name} yields an empty password")
+    return password
 
 
 def login() -> Garmin:
-    """Credential login (GARMIN_EMAIL + `pass` password, MFA prompt); saves tokens."""
+    """Credential login (GARMIN_EMAIL + password from env, MFA prompt); saves tokens."""
     api = Garmin(
         os.environ["GARMIN_EMAIL"],
-        pass_secret(PASS_ENTRY),
+        garmin_password(os.environ),
         prompt_mfa=lambda: input("Garmin MFA code: "),
     )
     api.login(str(GARMIN_DIR))
