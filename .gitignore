@@ -7,3 +7,6 @@ state/
 .direnv/
 __pycache__/
 .env
+node_modules/
+extension/*.js
+web-ext-artifacts/

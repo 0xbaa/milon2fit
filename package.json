@@ -1,0 +1,13 @@
+{
+  "name": "milon-export",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@garmin/fitsdk": "^21.221.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "web-ext": "^10.8.0"
+  },
+  "sideEffects": false
+}

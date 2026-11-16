@@ -12,8 +12,10 @@
       devShells = forAll (pkgs: {
         default = pkgs.mkShell {
           packages = with pkgs; [
+            biome
             just
             jq
+            nodejs
             python3
             ruff
             uv

@@ -1,0 +1,39 @@
+{
+  "manifest_version": 3,
+  "name": "milon to Strava",
+  "version": "0.1.0",
+  "description": "Send milon ME trainings to the Strava upload page.",
+  "permissions": [
+    "storage"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.milonme.com/*"
+      ],
+      "js": [
+        "milon.js"
+      ]
+    },
+    {
+      "matches": [
+        "https://www.strava.com/upload/select*"
+      ],
+      "js": [
+        "strava.js"
+      ]
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "milon2fit@0xbaa",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      },
+      "update_url": "https://github.com/0xbaa/milon2fit/releases/latest/download/updates.json"
+    }
+  }
+}

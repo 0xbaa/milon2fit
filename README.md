@@ -6,7 +6,7 @@
 
 ## Requirements
 
-- nix with flakes; `nix develop` provides python, uv, ruff, just, jq.
+- nix with flakes; `nix develop` provides python, uv, ruff, just, jq, nodejs, biome.
 - direnv (optional): `.envrc` runs `use flake` and loads `.env`.
 - `pass` (password-store) with an entry `garmin.com` whose first line is the Garmin password.
 
@@ -69,9 +69,45 @@ just garmin
 - Only premium circle trainings (`p` attendance); other types are skipped with a warning.
 - milon provides no per-rep or heart-rate series; the FIT file has sets and laps only.
 - Timestamps are UTC epochs. Only the month bucketing of attendance uses `Europe/Zurich` (`GYM_TZ`).
-- Machine to FIT exercise mapping is `EXERCISE_RULES` in `src/milon_export/fit.py`: ordered keyword rules on the machine name, first match wins; unmatched machines use category `unknown`.
+- Machine to FIT exercise mapping is `src/milon_export/exercise_rules.json` (read by `fit.py` and `js/fit.js`): ordered keyword rules on the machine name, first match wins; unmatched machines use category `unknown`.
 - The "t moved" figure is the concentric volume (sum of average weight times moves); it is not verified against milon's own counter.
 
 ## Development
 
-- `just check` runs ruff format, ruff check and pytest.
+- `just check` runs ruff format, ruff check, biome format, biome lint, pytest and `node --test`. `just fmt-check` is the non-writing format check used in CI.
+- `npm ci` installs JS dependencies once.
+
+## Browser extension
+
+Sends a milon ME training to the Strava upload page, prefilled with the FIT file, title and per-station description. Nothing is saved to Strava until Save is clicked.
+
+### Install (friends)
+
+- Firefox 140 or newer: open the latest release page, click the `.xpi` file, confirm. Updates install automatically via `updates.json`.
+  - Fallback if Firefox downloads the file instead of installing: open the download panel and click the file, or `about:addons`, gear menu, Install Add-on From File.
+  - Unconfirmed: verify the direct install on the first release.
+- Chrome: download the `.zip` from the latest release and unzip it. Open `chrome://extensions`, enable Developer mode, click Load unpacked, pick the unzipped folder. Updates are manual.
+
+### Usage
+
+- Log in at www.milonme.com and at Strava in the same browser.
+- On milonme.com click "milon → Strava" (bottom right). The panel lists trainings newest first.
+- "Strava" opens the Strava upload page, uploads the file, fills title and description, and marks the training "sent". Review the form and click Save.
+- "FIT" downloads the file for a manual Garmin Connect or Strava upload.
+- Strava reports a training uploaded twice as a duplicate (matched by start time).
+- Errors appear as one line in the panel or in a banner on the Strava page.
+
+### Build
+
+- `just ext-build`: bundles `js/milon.js` and `js/strava.js` into `extension/`, then `web-ext lint`.
+- `just ext-zip`: Chrome zip in `web-ext-artifacts/`.
+- `just ext-sign`: AMO unlisted signing, used by CI only; CI is the only signing path.
+- Local run: `npx web-ext run --source-dir extension` (Firefox) or load `extension/` unpacked (Chrome).
+
+### Release (maintainer)
+
+- One-time: create an AMO API key at addons.mozilla.org, Tools, Manage API Keys. Add repo secrets `WEB_EXT_API_KEY` (JWT issuer) and `WEB_EXT_API_SECRET`.
+- The repo must be public: `gecko.update_url` in `extension/manifest.json` points to `https://github.com/0xbaa/milon2fit/releases/latest/download/updates.json`. Change it if the repo path differs.
+- Bump `version` in `extension/manifest.json` (the only place the version lives), commit, then `git tag vX.Y.Z` and `git push --tags`.
+- A release that fails after signing needs a version bump and a new tag, because AMO rejects a version it has already signed.
+- `.github/workflows/release.yml` checks tag against manifest, runs `just check`, builds, signs with AMO, and creates the GitHub release with the `.xpi`, the Chrome zip and `updates.json`.
