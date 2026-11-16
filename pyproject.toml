@@ -1,5 +1,5 @@
 [project]
-name = "milon-export"
+name = "milon2fit"
 version = "0.1.0"
 description = "Export milon ME training data and upload to Strava"
 authors = [

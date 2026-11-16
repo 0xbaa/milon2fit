@@ -1,4 +1,4 @@
-# milon-export
+# milon2fit
 
 milon ME (gym circle training) has no export. This project gets milon trainings onto Strava and Garmin Connect as strength activities with one set per station round (exercise, reps, weight). Strava builds its muscle map from the sets.
 

@@ -307,7 +307,7 @@ wheels = [
 ]
 
 [[package]]
-name = "milon-export"
+name = "milon2fit"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
